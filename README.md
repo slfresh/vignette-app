@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# European Vignette Portal
 
-## Getting Started
+Independent route-based vignette guidance for Europe. The app analyzes a route, detects likely toll and vignette obligations by country, and links only to official operator websites.
 
-First, run the development server:
+## Core principles
+
+- Official-source links only (no reselling).
+- Informational-only legal posture with visible disclaimers.
+- Server-side routing logic to keep API keys private.
+- Consent-first loading for optional affiliate tracking modules.
+
+## Tech stack
+
+- Next.js App Router and TypeScript
+- Tailwind CSS
+- OpenRouteService directions metadata
+- OpenStreetMap and Leaflet map rendering
+
+## Local setup
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Create env file:
+
+```bash
+cp .env.example .env.local
+```
+
+3. Set `ORS_API_KEY` in `.env.local`.
+   - For production-grade rate limiting, also set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
+   - If Upstash variables are missing, the app falls back to in-memory rate limiting (single-instance only).
+   - Set `APP_CONTACT_EMAIL` for geocoding user-agent identification.
+   - Set `APP_PUBLIC_URL` for canonical metadata, robots, and sitemap.
+
+4. Run dev server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+5. Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `npm run dev`: start development server
+- `npm run build`: production build
+- `npm run start`: run production build
+- `npm run lint`: lint
+- `npm run typecheck`: TypeScript check
+- `npm run test`: unit tests (Vitest)
 
-## Learn More
+## Legal pages included
 
-To learn more about Next.js, take a look at the following resources:
+- `/impressum`
+- `/datenschutz`
+- `/haftungsausschluss`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+These pages are starter templates and must be replaced with your real legal details before going live.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Security and compliance notes
 
-## Deploy on Vercel
+- API keys are used only on server endpoints.
+- Optional affiliate blocks are feature-flagged and consent-gated.
+- Map tile provider IP transfer is disclosed in privacy content.
+- Legal page operator details are loaded from `LEGAL_*` environment variables.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deployment target
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project is prepared for container deployment on Hetzner with Dokploy or Coolify using the included `Dockerfile`.
+
+## Launch checklist
+
+Follow `docs/predeploy-checklist.md` before going live.
