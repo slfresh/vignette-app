@@ -1,8 +1,9 @@
 "use client";
 
-import { Loader2, Route } from "lucide-react";
+import { Info, Loader2, Route } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { RoutePoint, VehicleClass } from "@/types/vignette";
+import { useI18n } from "@/components/i18n/I18nProvider";
+import type { EmissionClass, PowertrainType, RoutePoint, VehicleClass } from "@/types/vignette";
 
 interface GeocodeSuggestion {
   label: string;
@@ -40,12 +41,17 @@ interface RouteFormProps {
     dateISO?: string;
     seats?: number;
     vehicleClass?: VehicleClass;
+    powertrainType?: PowertrainType;
+    grossWeightKg?: number;
+    axles?: number;
+    emissionClass?: EmissionClass;
     avoidTolls?: boolean;
     channelCrossingPreference?: "auto" | "ferry" | "tunnel";
   }) => Promise<void>;
 }
 
 export function RouteForm({ onSubmit }: RouteFormProps) {
+  const { t } = useI18n();
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [startPoint, setStartPoint] = useState<RoutePoint | undefined>(undefined);
@@ -56,11 +62,16 @@ export function RouteForm({ onSubmit }: RouteFormProps) {
   const [activeEndSuggestionIndex, setActiveEndSuggestionIndex] = useState(-1);
   const [dateISO, setDateISO] = useState("");
   const [seats, setSeats] = useState<number>(5);
+  const [grossWeightKgInput, setGrossWeightKgInput] = useState<string>("");
+  const [axles, setAxles] = useState<number>(2);
+  const [emissionClass, setEmissionClass] = useState<EmissionClass>("UNKNOWN");
+  const [powertrainType, setPowertrainType] = useState<PowertrainType>("PETROL");
   const [vehicleType, setVehicleType] = useState<"car" | "motorcycle" | "camper">("car");
   const [avoidTolls, setAvoidTolls] = useState(false);
   const [channelCrossingPreference, setChannelCrossingPreference] = useState<"auto" | "ferry" | "tunnel">("auto");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isMotorcycle = vehicleType === "motorcycle";
   const startNeedsApproximateMatchWarning =
     start.trim().length >= 3 && extractHouseNumber(start) && startSuggestions.length > 0 && !hasExactHouseNumberMatch(start, startSuggestions);
   const endNeedsApproximateMatchWarning =
@@ -157,7 +168,17 @@ export function RouteForm({ onSubmit }: RouteFormProps) {
     setError(null);
 
     if (!start.trim() || !end.trim()) {
-      setError("Please provide both start and destination.");
+      setError(t("form.error.startEndRequired"));
+      return;
+    }
+
+    const grossWeightKg = grossWeightKgInput.trim().length ? Number(grossWeightKgInput) : undefined;
+    if (!isMotorcycle && grossWeightKg !== undefined && (!Number.isFinite(grossWeightKg) || grossWeightKg <= 0)) {
+      setError(t("form.error.grossWeight"));
+      return;
+    }
+    if (!isMotorcycle && (!Number.isFinite(axles) || axles < 1 || axles > 8)) {
+      setError(t("form.error.axles"));
       return;
     }
 
@@ -169,13 +190,17 @@ export function RouteForm({ onSubmit }: RouteFormProps) {
         startPoint,
         endPoint,
         dateISO: dateISO || undefined,
-        seats,
+        seats: isMotorcycle ? undefined : seats,
         vehicleClass: toVehicleClass(vehicleType),
+        powertrainType,
+        grossWeightKg: isMotorcycle ? undefined : grossWeightKg,
+        axles: isMotorcycle ? undefined : axles,
+        emissionClass: powertrainType === "ELECTRIC" ? "ZERO_EMISSION" : isMotorcycle ? "UNKNOWN" : emissionClass,
         avoidTolls,
         channelCrossingPreference,
       });
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Route request failed.");
+      setError(submitError instanceof Error ? submitError.message : t("form.error.routeRequestFailed"));
     } finally {
       setLoading(false);
     }
@@ -183,17 +208,15 @@ export function RouteForm({ onSubmit }: RouteFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-      <h2 className="mb-1 text-lg font-semibold text-zinc-900">Route input</h2>
-      <p className="mb-4 text-sm text-zinc-600">
-        Enter city names or coordinates in <code>lat,lon</code> format.
-      </p>
+      <h2 className="mb-1 text-lg font-semibold text-zinc-900">{t("form.title")}</h2>
+      <p className="mb-4 text-sm text-zinc-600">{t("form.subtitle")}</p>
 
       <div className="grid gap-3">
         <label className="relative grid gap-1 text-sm">
-          <span className="font-medium text-zinc-800">Start</span>
+          <span className="font-medium text-zinc-800">{t("form.start")}</span>
           <input
             className="rounded-md border border-zinc-300 px-3 py-2"
-            placeholder="Munich or 48.137,11.575"
+            placeholder={t("form.startPlaceholder")}
             value={start}
             onChange={(event) => {
               setStart(event.target.value);
@@ -255,10 +278,10 @@ export function RouteForm({ onSubmit }: RouteFormProps) {
               ))}
             </div>
           ) : null}
-          {startPoint ? <p className="text-xs text-emerald-700">Selected address locked for routing.</p> : null}
+          {startPoint ? <p className="text-xs text-emerald-700">{t("form.selectedAddressLocked")}</p> : null}
           {startNeedsApproximateMatchWarning ? (
             <div className="mt-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-900">
-              Exact house number was not found in suggestions. Nearest street-level match may be used.
+              {t("form.approxWarning")}
               <button
                 type="button"
                 className="ml-2 underline"
@@ -267,17 +290,17 @@ export function RouteForm({ onSubmit }: RouteFormProps) {
                   setStartSuggestions([]);
                 }}
               >
-                Use typed address anyway
+                {t("form.useTypedAddress")}
               </button>
             </div>
           ) : null}
         </label>
 
         <label className="relative grid gap-1 text-sm">
-          <span className="font-medium text-zinc-800">Destination</span>
+          <span className="font-medium text-zinc-800">{t("form.destination")}</span>
           <input
             className="rounded-md border border-zinc-300 px-3 py-2"
-            placeholder="Budapest or 47.498,19.040"
+            placeholder={t("form.destinationPlaceholder")}
             value={end}
             onChange={(event) => {
               setEnd(event.target.value);
@@ -339,10 +362,10 @@ export function RouteForm({ onSubmit }: RouteFormProps) {
               ))}
             </div>
           ) : null}
-          {endPoint ? <p className="text-xs text-emerald-700">Selected address locked for routing.</p> : null}
+          {endPoint ? <p className="text-xs text-emerald-700">{t("form.selectedAddressLocked")}</p> : null}
           {endNeedsApproximateMatchWarning ? (
             <div className="mt-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-900">
-              Exact house number was not found in suggestions. Nearest street-level match may be used.
+              {t("form.approxWarning")}
               <button
                 type="button"
                 className="ml-2 underline"
@@ -351,28 +374,53 @@ export function RouteForm({ onSubmit }: RouteFormProps) {
                   setEndSuggestions([]);
                 }}
               >
-                Use typed address anyway
+                {t("form.useTypedAddress")}
               </button>
             </div>
           ) : null}
         </label>
 
         <label className="grid gap-1 text-sm">
-          <span className="font-medium text-zinc-800">Vehicle type</span>
+          <span className="font-medium text-zinc-800">{t("form.vehicleType")}</span>
           <select
             className="rounded-md border border-zinc-300 px-3 py-2"
             value={vehicleType}
             onChange={(event) => setVehicleType(event.target.value as "car" | "motorcycle" | "camper")}
           >
-            <option value="car">Car</option>
-            <option value="motorcycle">Motorcycle</option>
-            <option value="camper">Camper van / RV</option>
+            <option value="car">{t("form.vehicle.car")}</option>
+            <option value="motorcycle">{t("form.vehicle.motorcycle")}</option>
+            <option value="camper">{t("form.vehicle.camper")}</option>
           </select>
         </label>
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <label className="grid gap-1 text-sm">
+          <span className="font-medium text-zinc-800">{t("form.powertrain")}</span>
+          <select
+            className="rounded-md border border-zinc-300 px-3 py-2"
+            value={powertrainType}
+            onChange={(event) => setPowertrainType(event.target.value as PowertrainType)}
+          >
+            <option value="PETROL">{t("form.powertrain.petrol")}</option>
+            <option value="DIESEL">{t("form.powertrain.diesel")}</option>
+            <option value="ELECTRIC">{t("form.powertrain.electric")}</option>
+            <option value="HYBRID">{t("form.powertrain.hybrid")}</option>
+          </select>
+        </label>
+
+        <div className={`grid gap-3 ${isMotorcycle ? "" : "sm:grid-cols-2"}`}>
           <label className="grid gap-1 text-sm">
-            <span className="font-medium text-zinc-800">Trip date (optional)</span>
+            <span className="flex items-center gap-1 font-medium text-zinc-800">
+              {t("form.tripDate")}
+              <details className="group relative">
+                <summary className="flex cursor-pointer list-none items-center text-zinc-500 hover:text-zinc-700">
+                  <Info className="h-4 w-4" />
+                  <span className="sr-only">{t("form.tripDateHelp")}</span>
+                </summary>
+                <span className="absolute z-20 mt-1 w-64 rounded-md border border-zinc-200 bg-white p-2 text-xs font-normal text-zinc-700 shadow-lg">
+                  {t("form.tripDateHelp")}
+                </span>
+              </details>
+            </span>
             <input
               type="date"
               className="rounded-md border border-zinc-300 px-3 py-2"
@@ -381,30 +429,90 @@ export function RouteForm({ onSubmit }: RouteFormProps) {
             />
           </label>
 
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium text-zinc-800">Seats (for category hints)</span>
-            <input
-              type="number"
-              min={1}
-              max={20}
-              className="rounded-md border border-zinc-300 px-3 py-2"
-              value={seats}
-              onChange={(event) => setSeats(Number(event.target.value))}
-            />
-          </label>
+          {!isMotorcycle ? (
+            <label className="grid gap-1 text-sm">
+              <span className="font-medium text-zinc-800">{t("form.seats")}</span>
+              <input
+                type="number"
+                min={1}
+                max={20}
+                className="rounded-md border border-zinc-300 px-3 py-2"
+                value={seats}
+                onChange={(event) => setSeats(Number(event.target.value))}
+              />
+            </label>
+          ) : null}
         </div>
+
+        {!isMotorcycle ? (
+          <>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <label className="grid gap-1 text-sm">
+                <span className="font-medium text-zinc-800">{t("form.grossWeight")}</span>
+                <input
+                  type="number"
+                  min={200}
+                  max={60000}
+                  className="rounded-md border border-zinc-300 px-3 py-2"
+                  placeholder={t("form.optional")}
+                  value={grossWeightKgInput}
+                  onChange={(event) => setGrossWeightKgInput(event.target.value)}
+                />
+              </label>
+
+              <label className="grid gap-1 text-sm">
+                <span className="font-medium text-zinc-800">{t("form.axles")}</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={8}
+                  className="rounded-md border border-zinc-300 px-3 py-2"
+                  value={axles}
+                  onChange={(event) => setAxles(Number(event.target.value))}
+                />
+              </label>
+
+              {powertrainType === "ELECTRIC" ? (
+                <label className="grid gap-1 text-sm">
+                  <span className="font-medium text-zinc-800">{t("form.emissionClass")}</span>
+                  <input
+                    className="rounded-md border border-zinc-300 bg-zinc-50 px-3 py-2 text-zinc-700"
+                    value={t("form.emissionClass.auto")}
+                    readOnly
+                  />
+                </label>
+              ) : (
+                <label className="grid gap-1 text-sm">
+                  <span className="font-medium text-zinc-800">{t("form.emissionClass")}</span>
+                  <select
+                    className="rounded-md border border-zinc-300 px-3 py-2"
+                    value={emissionClass}
+                    onChange={(event) => setEmissionClass(event.target.value as EmissionClass)}
+                  >
+                    <option value="UNKNOWN">{t("form.emission.unknown")}</option>
+                    <option value="EURO_6">{t("form.emission.euro6")}</option>
+                    <option value="EURO_5_OR_LOWER">{t("form.emission.euro5")}</option>
+                  </select>
+                </label>
+              )}
+            </div>
+            <p className="text-xs text-zinc-600">
+              {t("form.profileCheck")}
+            </p>
+          </>
+        ) : null}
 
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="grid gap-1 text-sm">
-            <span className="font-medium text-zinc-800">Channel crossing (for UK routes)</span>
+            <span className="font-medium text-zinc-800">{t("form.channelCrossing")}</span>
             <select
               className="rounded-md border border-zinc-300 px-3 py-2"
               value={channelCrossingPreference}
               onChange={(event) => setChannelCrossingPreference(event.target.value as "auto" | "ferry" | "tunnel")}
             >
-              <option value="auto">Auto detect</option>
-              <option value="ferry">Prefer ferry</option>
-              <option value="tunnel">Prefer Eurotunnel</option>
+              <option value="auto">{t("form.channel.auto")}</option>
+              <option value="ferry">{t("form.channel.ferry")}</option>
+              <option value="tunnel">{t("form.channel.tunnel")}</option>
             </select>
           </label>
 
@@ -414,7 +522,7 @@ export function RouteForm({ onSubmit }: RouteFormProps) {
               checked={avoidTolls}
               onChange={(event) => setAvoidTolls(event.target.checked)}
             />
-            Avoid toll roads where possible
+            {t("form.avoidTolls")}
           </label>
         </div>
       </div>
@@ -427,7 +535,7 @@ export function RouteForm({ onSubmit }: RouteFormProps) {
         className="mt-4 inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
       >
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Route className="h-4 w-4" />}
-        Calculate route
+        {t("form.submit")}
       </button>
     </form>
   );

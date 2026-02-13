@@ -38,6 +38,9 @@ export type VehicleClass =
   | "VAN_OR_MPV"
   | "UNKNOWN";
 
+export type EmissionClass = "ZERO_EMISSION" | "EURO_6" | "EURO_5_OR_LOWER" | "UNKNOWN";
+export type PowertrainType = "PETROL" | "DIESEL" | "ELECTRIC" | "HYBRID";
+
 export interface RoutePoint {
   lat: number;
   lon: number;
@@ -56,6 +59,7 @@ export interface CountryTravelSummary {
   requiresVignette: boolean;
   requiresSectionToll: boolean;
   notices: string[];
+  routeSegments?: RouteLineString[];
 }
 
 export interface SectionTollNotice {
@@ -78,6 +82,7 @@ export interface VignetteProduct {
   currency: CurrencyCode;
   notes?: string;
   vehicleTags?: VehicleClass[];
+  powertrainTags?: PowertrainType[];
 }
 
 export interface CountryPricing {
@@ -92,15 +97,104 @@ export interface RouteLineString {
   coordinates: [number, number][];
 }
 
+export interface TripEstimate {
+  totalDistanceKm: number;
+  vignetteEstimateEur: number;
+  sectionTollEstimateEur: number;
+  totalRoadChargesEur: number;
+  vignetteBreakdown: Array<{
+    countryCode: CountryCode;
+    productLabel: string;
+    originalPrice: {
+      amount: number;
+      currency: CurrencyCode;
+    };
+    priceEur: number;
+  }>;
+  sectionTollBreakdown: Array<{
+    countryCode: CountryCode;
+    estimatedEur: number;
+  }>;
+  powertrain: "combustion" | "electric";
+  fuel?: {
+    assumedFuelType: "petrol" | "diesel";
+    litersNeeded: number;
+    averagePricePerLiterEur: number;
+    estimatedFuelCostEur: number;
+    bestTopUpCountryCode?: CountryCode;
+    bestTopUpPriceEurPerLiter?: number;
+    routeCountryFuelPrices: Array<{
+      countryCode: CountryCode;
+      priceEurPerLiter: number;
+    }>;
+    estimatedRangePerFullTankKm: number;
+    suggestedTopUpCountries: CountryCode[];
+  };
+  electric?: {
+    kwhNeeded: number;
+    averagePricePerKwhEur: number;
+    estimatedChargingCostEur: number;
+    bestChargeCountryCode?: CountryCode;
+    bestChargePriceEurPerKwh?: number;
+    routeCountryChargingPrices: Array<{
+      countryCode: CountryCode;
+      priceEurPerKwh: number;
+    }>;
+    estimatedRangePerFullChargeKm: number;
+    suggestedChargeCountries: CountryCode[];
+  };
+  assumptions: string[];
+}
+
+export interface TripShieldInsights {
+  hasFreeFlowToll: boolean;
+  hasMajorUrbanZoneRisk: boolean;
+  hasBorderCrossing: boolean;
+  departureTimeHint?: string;
+  tollWindowImpact?: {
+    countryCode: CountryCode;
+    level: "savings_opportunity" | "surcharge_risk" | "neutral";
+    title: string;
+    details: string;
+    estimatedDelta: string;
+  };
+  warnings: string[];
+}
+
+export interface TripTimelineEntry {
+  countryCode: CountryCode;
+  label: string;
+  action: string;
+  estimatedCostEur?: number;
+  requiresVignette: boolean;
+  requiresSectionToll: boolean;
+  hasUrbanAccessRisk: boolean;
+}
+
+export interface TripReadiness {
+  confidenceScore: number;
+  confidenceLevel: "high" | "medium" | "low";
+  confidenceReasons: string[];
+  timeline: TripTimelineEntry[];
+  checklist: string[];
+}
+
 export interface RouteAnalysisResult {
   routeGeoJson: RouteLineString;
   countries: CountryTravelSummary[];
   sectionTolls: SectionTollNotice[];
   compliance: ComplianceNotice;
+  tripEstimate?: TripEstimate;
+  tripShield?: TripShieldInsights;
+  tripReadiness?: TripReadiness;
   appliedPreferences?: {
     avoidTolls: boolean;
     channelCrossingPreference: "auto" | "ferry" | "tunnel";
     vehicleClass: VehicleClass;
+    powertrainType?: PowertrainType;
+    grossWeightKg?: number;
+    axles?: number;
+    emissionClass?: EmissionClass;
   };
 }
 
@@ -111,6 +205,10 @@ export interface RouteAnalysisRequest {
   endPoint?: RoutePoint;
   dateISO?: string;
   vehicleClass?: VehicleClass;
+  powertrainType?: PowertrainType;
+  grossWeightKg?: number;
+  axles?: number;
+  emissionClass?: EmissionClass;
   seats?: number;
   avoidTolls?: boolean;
   channelCrossingPreference?: "auto" | "ferry" | "tunnel";

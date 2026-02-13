@@ -6,7 +6,7 @@ export default function ImpressumPage() {
 
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6">
-      <h1 className="text-2xl font-bold text-zinc-900">Impressum</h1>
+      <h1 className="text-2xl font-bold text-zinc-900">Imprint</h1>
       {hasPlaceholders ? (
         <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
           Pre-launch blocker: legal provider details are placeholders. Fill LEGAL_* env values before publishing.

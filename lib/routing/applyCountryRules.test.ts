@@ -40,6 +40,10 @@ describe("applyCountryRules", () => {
     expect(result.countries[0]?.countryCode).toBe("AT");
     expect(result.countries[0]?.requiresVignette).toBe(true);
     expect(result.sectionTolls.length).toBeGreaterThan(0);
+    expect(result.tripEstimate?.totalDistanceKm).toBeGreaterThan(0);
+    expect(result.tripEstimate?.totalRoadChargesEur).toBeGreaterThan(0);
+    expect(result.tripReadiness?.timeline.length).toBeGreaterThan(0);
+    expect(result.tripReadiness?.checklist.length).toBeGreaterThan(0);
   });
 
   it("flags Croatia as section toll instead of vignette", () => {
@@ -110,12 +114,19 @@ describe("applyCountryRules", () => {
     const result = applyCountryRules(sample, {
       start: "Paris",
       end: "Lyon",
+      dateISO: "2026-06-14",
     });
 
     expect(result.countries[0]?.countryCode).toBe("FR");
     expect(result.countries[0]?.requiresVignette).toBe(false);
     expect(result.countries[0]?.requiresSectionToll).toBe(true);
     expect(result.sectionTolls.some((notice) => notice.countryCode === "FR")).toBe(true);
+    expect(result.sectionTolls.some((notice) => notice.label === "France Flux Libre (Free-Flow)")).toBe(true);
+    expect(result.sectionTolls.some((notice) => notice.label === "France A1/A14 time-window pricing")).toBe(true);
+    expect(result.tripShield?.hasFreeFlowToll).toBe(true);
+    expect(result.tripShield?.departureTimeHint).toBeDefined();
+    expect(result.tripShield?.tollWindowImpact?.level).toBe("savings_opportunity");
+    expect(result.tripShield?.warnings.some((warning) => warning.includes("72 hours"))).toBe(true);
   });
 
   it("flags Poland motorway as toll-based without vignette", () => {
@@ -232,6 +243,8 @@ describe("applyCountryRules", () => {
     const labels = result.sectionTolls.map((notice) => notice.label);
     expect(labels).toContain("London ULEZ/Congestion");
     expect(labels).toContain("Channel Crossing Booking");
+    expect(result.tripShield?.hasMajorUrbanZoneRisk).toBe(true);
+    expect(result.tripShield?.hasBorderCrossing).toBe(true);
   });
 
   it("marks tolls as avoided when avoid-tolls route stays off tollway segments", () => {
@@ -271,5 +284,77 @@ describe("applyCountryRules", () => {
     expect(result.countries[0]?.countryCode).toBe("FR");
     expect(result.countries[0]?.requiresSectionToll).toBe(false);
     expect(result.countries[0]?.notices.some((text) => text.includes("Tolls avoided"))).toBe(true);
+  });
+
+  it("shows surcharge risk hint for France toll windows on Fridays", () => {
+    const sample: OrsDirectionsResponse = {
+      type: "FeatureCollection",
+      features: [
+        {
+          geometry: {
+            type: "LineString",
+            coordinates: [
+              [2.3522, 48.8566],
+              [3.5, 47.8],
+              [4.8357, 45.764],
+            ],
+          },
+          properties: {
+            extras: {
+              countryinfo: {
+                values: [[0, 2, 70]],
+              },
+              waycategory: {
+                values: [[0, 2, 1]],
+              },
+            },
+          },
+        },
+      ],
+    };
+
+    const result = applyCountryRules(sample, {
+      start: "Paris",
+      end: "Lyon",
+      dateISO: "2026-06-12",
+    });
+
+    expect(result.tripShield?.tollWindowImpact?.level).toBe("surcharge_risk");
+  });
+
+  it("adds heavy-vehicle notice when gross weight exceeds 3.5t", () => {
+    const sample: OrsDirectionsResponse = {
+      type: "FeatureCollection",
+      features: [
+        {
+          geometry: {
+            type: "LineString",
+            coordinates: [
+              [13.0, 47.0],
+              [13.2, 47.2],
+            ],
+          },
+          properties: {
+            extras: {
+              countryinfo: {
+                values: [[0, 1, 11]],
+              },
+              waycategory: {
+                values: [[0, 1, 1]],
+              },
+            },
+          },
+        },
+      ],
+    };
+
+    const result = applyCountryRules(sample, {
+      start: "Salzburg",
+      end: "Graz",
+      grossWeightKg: 4200,
+      axles: 2,
+    });
+
+    expect(result.countries[0]?.notices.some((notice) => notice.includes(">3.5t"))).toBe(true);
   });
 });

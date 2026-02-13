@@ -56,6 +56,8 @@ function resolveTollCountryRequirement(
 }
 
 function appendVehicleSpecificNotices(countryCode: CountryCode, request: RouteAnalysisRequest, notices: string[]) {
+  const isHeavyVehicle = (request.grossWeightKg ?? 0) > 3500;
+
   if (request.vehicleClass === "MOTORCYCLE") {
     if (countryCode === "AT") {
       notices.push("Motorcycle tariffs differ from car tariffs in Austria.");
@@ -78,6 +80,10 @@ function appendVehicleSpecificNotices(countryCode: CountryCode, request: RouteAn
       notices.push("Heavier camper vehicles in Switzerland can fall under separate heavy-vehicle rules.");
     }
   }
+
+  if (isHeavyVehicle && (countryCode === "AT" || countryCode === "CH" || countryCode === "SI")) {
+    notices.push("Vehicle profile indicates >3.5t. Verify heavy-vehicle toll regime before travel.");
+  }
 }
 
 export function evaluateCountryRequirement(
@@ -92,13 +98,13 @@ export function evaluateCountryRequirement(
 
   switch (countryCode) {
     case "DE":
+      if (request.emissionClass === "EURO_5_OR_LOWER" || request.emissionClass === "UNKNOWN") {
+        notices.push("Lower emission classes can face stricter German city access restrictions.");
+      }
       return {
         requiresVignette: false,
         requiresSectionToll: false,
-        notices: [
-          "No passenger-car national vignette requirement.",
-          "Environmental sticker (Umweltplakette) can be required for city low-emission zones.",
-        ],
+        notices: ["No passenger-car national vignette requirement.", "Environmental sticker (Umweltplakette) can be required for city low-emission zones.", ...notices],
       };
     case "AT":
       if (hasHighway) {
@@ -110,6 +116,12 @@ export function evaluateCountryRequirement(
       return { requiresVignette: hasHighway, requiresSectionToll: hasTollway, notices };
     case "CZ":
       notices.push("Foreign EV exemptions may require pre-submitted documents.");
+      if (request.powertrainType === "HYBRID") {
+        notices.push("Czechia can offer reduced tariffs for qualifying low-emission hybrid categories.");
+      }
+      if (request.powertrainType === "ELECTRIC") {
+        notices.push("Electric vehicles can be exempt in Czechia only after successful exemption registration.");
+      }
       return { requiresVignette: hasHighway, requiresSectionToll: false, notices };
     case "SK":
       notices.push("10-day can be better value than two 1-day products.");
@@ -157,6 +169,9 @@ export function evaluateCountryRequirement(
     case "FR":
       notices.push("France motorways are usually distance-tolled instead of vignette-based.");
       notices.push("Crit'Air environmental sticker can be required in French low-emission zones (ZFE).");
+      if (request.emissionClass === "EURO_5_OR_LOWER" || request.emissionClass === "UNKNOWN") {
+        notices.push("Lower emission classes can face stricter access rules in French urban zones.");
+      }
       return { requiresVignette: false, requiresSectionToll: resolveTollCountryRequirement(hasHighway, hasTollway, request, notices), notices };
     case "IT":
       notices.push("Italy motorways are usually distance-tolled instead of vignette-based.");
@@ -288,6 +303,19 @@ export function getSectionTollNotices(
         label: "France Motorway Toll",
         description: "Most French autoroutes are toll roads with distance-based pricing.",
         officialUrl: SECTION_TOLL_LINKS.FR,
+      },
+      {
+        countryCode,
+        label: "France Flux Libre (Free-Flow)",
+        description:
+          "Some French corridors use free-flow tolling. Payment must usually be completed within 72 hours to avoid penalties.",
+        officialUrl: "https://www.sanef.com/en/pay-your-toll",
+      },
+      {
+        countryCode,
+        label: "France A1/A14 time-window pricing",
+        description: "On selected windows, A1/A14 toll prices can be lower off-peak and higher in peak return periods.",
+        officialUrl: "https://www.sanef.com/en",
       },
     ];
   }

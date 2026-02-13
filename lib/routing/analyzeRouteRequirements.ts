@@ -6,6 +6,7 @@ interface CoverageAccumulator {
   highwayDistanceMeters: number;
   hasHighway: boolean;
   hasTollway: boolean;
+  segmentRanges: Array<{ start: number; end: number }>;
 }
 
 function getCategoryForSegment(index: number, wayCategories: [number, number, number][]): number {
@@ -16,6 +17,20 @@ function getCategoryForSegment(index: number, wayCategories: [number, number, nu
 export interface AnalysisDraft {
   lineString: RouteLineString;
   countries: Map<CountryCode, CoverageAccumulator>;
+  totalDistanceMeters: number;
+}
+
+function distanceMetersBetween(a: [number, number], b: [number, number]): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const lat1 = toRad(a[1]);
+  const lat2 = toRad(b[1]);
+  const deltaLat = lat2 - lat1;
+  const deltaLon = toRad(b[0] - a[0]);
+  const h =
+    Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+  return 6_371_000 * c;
 }
 
 export function analyzeRouteRequirements(
@@ -42,6 +57,16 @@ export function analyzeRouteRequirements(
   }
 
   const countries = new Map<CountryCode, CoverageAccumulator>();
+  let computedDistanceMeters = 0;
+
+  for (let idx = 0; idx < coordinates.length - 1; idx += 1) {
+    const current = coordinates[idx];
+    const next = coordinates[idx + 1];
+    if (!current || !next) {
+      continue;
+    }
+    computedDistanceMeters += distanceMetersBetween(current, next);
+  }
 
   for (const [start, end, countryId] of countryRanges) {
     const countryCode = ORS_COUNTRY_ID_MAP[countryId];
@@ -53,7 +78,9 @@ export function analyzeRouteRequirements(
       highwayDistanceMeters: 0,
       hasHighway: false,
       hasTollway: false,
+      segmentRanges: [],
     };
+    existing.segmentRanges.push({ start, end });
 
     for (let idx = start; idx < end; idx += 1) {
       const current = coordinates[idx];
@@ -85,6 +112,7 @@ export function analyzeRouteRequirements(
       coordinates,
     },
     countries,
+    totalDistanceMeters: feature.properties?.summary?.distance ?? Math.round(computedDistanceMeters),
   };
 }
 
@@ -100,6 +128,18 @@ export function mapCountrySummaries(
       requiresVignette: decision.requiresVignette,
       requiresSectionToll: decision.requiresSectionToll,
       notices: decision.notices,
+      routeSegments: data.segmentRanges
+        .map((range) => {
+          const segmentCoordinates = draft.lineString.coordinates.slice(range.start, range.end + 1);
+          if (segmentCoordinates.length < 2) {
+            return null;
+          }
+          return {
+            type: "LineString" as const,
+            coordinates: segmentCoordinates,
+          };
+        })
+        .filter((segment): segment is { type: "LineString"; coordinates: [number, number][] } => Boolean(segment)),
     };
   });
 }

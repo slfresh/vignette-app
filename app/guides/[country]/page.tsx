@@ -1,6 +1,7 @@
 import { COUNTRY_GUIDES } from "@/lib/content/countryGuides";
 import { PRICING_2026 } from "@/lib/config/pricing2026";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 export function generateStaticParams() {
@@ -30,6 +31,14 @@ export default async function CountryGuidePage({ params }: { params: Promise<{ c
 
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6">
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        <Link href="/" className="font-medium text-blue-700 underline">
+          ← Back to home
+        </Link>
+        <Link href="/guides" className="font-medium text-blue-700 underline">
+          All guides
+        </Link>
+      </div>
       <h1 className="text-2xl font-bold text-zinc-900">{guide.name} guide</h1>
       <p className="mt-2 text-sm text-zinc-700">{guide.summary}</p>
 

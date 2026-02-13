@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import { BRAND } from "@/lib/config/branding";
+import { I18nProvider } from "@/components/i18n/I18nProvider";
+import { FooterNav } from "@/components/layout/FooterNav";
+import { TopRightControls } from "@/components/theme/TopRightControls";
 import { Geist, Geist_Mono } from "next/font/google";
-import Link from "next/link";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -15,22 +18,22 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.APP_PUBLIC_URL ?? "https://example.com"),
-  title: "European Vignette Portal",
-  description: "Independent route-based guidance with official toll operator links.",
-  applicationName: "European Vignette Portal",
+  title: `${BRAND.name} | ${BRAND.subtitle}`,
+  description: BRAND.tagline,
+  applicationName: BRAND.name,
   alternates: {
     canonical: "/",
   },
   openGraph: {
     type: "website",
-    title: "European Vignette Portal",
-    description: "Independent route-based guidance with official toll operator links.",
+    title: `${BRAND.name} | ${BRAND.subtitle}`,
+    description: BRAND.tagline,
     url: "/",
   },
   twitter: {
     card: "summary_large_image",
-    title: "European Vignette Portal",
-    description: "Independent route-based guidance with official toll operator links.",
+    title: `${BRAND.name} | ${BRAND.subtitle}`,
+    description: BRAND.tagline,
   },
 };
 
@@ -39,29 +42,36 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const themeBootScript = `
+    (function(){
+      try {
+        var stored = localStorage.getItem('eurodrive-theme');
+        var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var mode = stored || (prefersDark ? 'dark' : 'light');
+        if (mode === 'dark') document.documentElement.classList.add('theme-dark');
+        else document.documentElement.classList.remove('theme-dark');
+      } catch (e) {}
+    })();
+  `;
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
         suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} bg-zinc-50 text-zinc-900 antialiased`}
       >
-        {children}
-        <footer className="mt-8 border-t border-zinc-200 bg-white">
-          <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-4 px-4 py-4 text-sm text-zinc-700 sm:px-6">
-            <Link href="/impressum" className="underline">
-              Impressum
-            </Link>
-            <Link href="/datenschutz" className="underline">
-              Datenschutz
-            </Link>
-            <Link href="/haftungsausschluss" className="underline">
-              Haftungsausschluss
-            </Link>
-            <Link href="/guides" className="underline">
-              Country guides
-            </Link>
+        <I18nProvider>
+          <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+          <div className="pointer-events-none fixed top-3 right-3 z-50">
+            <div className="pointer-events-auto">
+              <TopRightControls />
+            </div>
           </div>
-        </footer>
+          {children}
+          <footer className="mt-8 border-t border-zinc-200 bg-white">
+            <FooterNav />
+          </footer>
+        </I18nProvider>
       </body>
     </html>
   );

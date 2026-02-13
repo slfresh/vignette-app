@@ -200,6 +200,15 @@ export async function POST(request: Request) {
     if (body.start.length > 180 || body.end.length > 180) {
       return jsonError("Start or destination is too long. Please shorten the input.", 400);
     }
+    if (
+      body.grossWeightKg !== undefined &&
+      (!Number.isFinite(body.grossWeightKg) || body.grossWeightKg <= 0 || body.grossWeightKg > 60_000)
+    ) {
+      return jsonError("Gross weight must be between 1 and 60000 kg.", 400);
+    }
+    if (body.axles !== undefined && (!Number.isFinite(body.axles) || body.axles < 1 || body.axles > 8)) {
+      return jsonError("Axles must be between 1 and 8.", 400);
+    }
 
     if (!process.env.ORS_API_KEY) {
       return jsonError("Server is missing ORS_API_KEY.", 500);
@@ -265,6 +274,10 @@ export async function POST(request: Request) {
       avoidTolls: Boolean(body.avoidTolls),
       channelCrossingPreference: body.channelCrossingPreference ?? "auto",
       vehicleClass: body.vehicleClass ?? "PASSENGER_CAR_M1",
+      powertrainType: body.powertrainType ?? "PETROL",
+      grossWeightKg: body.grossWeightKg,
+      axles: body.axles,
+      emissionClass: body.powertrainType === "ELECTRIC" ? "ZERO_EMISSION" : body.emissionClass ?? "UNKNOWN",
     };
 
     return NextResponse.json(result);

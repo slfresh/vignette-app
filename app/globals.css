@@ -34,3 +34,87 @@ code {
   background: #eef2ff;
   padding: 0.1rem 0.3rem;
 }
+
+html.theme-dark body {
+  background: #0b1220;
+  color: #e5e7eb;
+}
+
+html.theme-dark .bg-white {
+  background-color: #111827 !important;
+}
+
+html.theme-dark .bg-zinc-50 {
+  background-color: #0f172a !important;
+}
+
+html.theme-dark .bg-orange-50 {
+  background-color: #1f2937 !important;
+}
+
+html.theme-dark .bg-red-50 {
+  background-color: #2a1a1a !important;
+}
+
+html.theme-dark .bg-sky-50 {
+  background-color: #10283a !important;
+}
+
+html.theme-dark .bg-emerald-50 {
+  background-color: #10251d !important;
+}
+
+html.theme-dark .border-zinc-200,
+html.theme-dark .border-zinc-300 {
+  border-color: #374151 !important;
+}
+
+html.theme-dark .border-sky-200,
+html.theme-dark .border-sky-300 {
+  border-color: #1f4a66 !important;
+}
+
+html.theme-dark .border-orange-200 {
+  border-color: #5b4020 !important;
+}
+
+html.theme-dark .border-red-200 {
+  border-color: #5b2828 !important;
+}
+
+html.theme-dark .border-emerald-200 {
+  border-color: #2d5b45 !important;
+}
+
+html.theme-dark .text-zinc-900,
+html.theme-dark .text-zinc-800,
+html.theme-dark .text-zinc-700 {
+  color: #e5e7eb !important;
+}
+
+html.theme-dark .text-zinc-600,
+html.theme-dark .text-zinc-500 {
+  color: #9ca3af !important;
+}
+
+html.theme-dark .text-blue-700 {
+  color: #93c5fd !important;
+}
+
+html.theme-dark .text-emerald-700 {
+  color: #6ee7b7 !important;
+}
+
+html.theme-dark .text-red-700 {
+  color: #fca5a5 !important;
+}
+
+html.theme-dark .text-orange-900,
+html.theme-dark .text-sky-900,
+html.theme-dark .text-sky-950 {
+  color: #dbeafe !important;
+}
+
+html.theme-dark code {
+  background: #1f2937;
+}
