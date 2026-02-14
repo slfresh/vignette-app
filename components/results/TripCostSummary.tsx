@@ -8,37 +8,21 @@ import { SECTION_TOLL_ESTIMATES_LAST_UPDATED } from "@/lib/config/sectionTollEst
 import type { RouteAnalysisResult } from "@/types/vignette";
 import { useMemo, useState } from "react";
 
-const COUNTRY_LABELS: Record<string, string> = {
-  DE: "Germany",
-  AT: "Austria",
-  CZ: "Czech Republic",
-  SK: "Slovakia",
-  HU: "Hungary",
-  SI: "Slovenia",
-  CH: "Switzerland",
-  RO: "Romania",
-  BG: "Bulgaria",
-  HR: "Croatia",
-  RS: "Serbia",
-  DK: "Denmark",
-  SE: "Sweden",
-  NL: "Netherlands",
-  BE: "Belgium",
-  FR: "France",
-  IT: "Italy",
-  BA: "Bosnia and Herzegovina",
-  ME: "Montenegro",
-  XK: "Kosovo",
-  MK: "North Macedonia",
-  AL: "Albania",
-  PL: "Poland",
-  ES: "Spain",
-  PT: "Portugal",
-  GB: "United Kingdom",
-  IE: "Ireland",
-  TR: "Turkey",
-  GR: "Greece",
-};
+import { COUNTRY_NAMES as COUNTRY_LABELS } from "@/lib/config/countryNames";
+
+function getOldestUpdateDate(): { label: string; isStale: boolean } {
+  const dates = [
+    EXCHANGE_RATES_LAST_UPDATED,
+    FUEL_ESTIMATES_LAST_UPDATED,
+    ELECTRICITY_ESTIMATES_LAST_UPDATED,
+    SECTION_TOLL_ESTIMATES_LAST_UPDATED,
+  ].map((d) => new Date(d).getTime()).filter((t) => !Number.isNaN(t));
+  
+  const oldest = Math.min(...dates);
+  const daysOld = (Date.now() - oldest) / (1000 * 60 * 60 * 24);
+  const label = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(oldest));
+  return { label, isStale: daysOld > 30 };
+}
 
 function formatUpdatedDate(value: string): string {
   const parsed = new Date(value);
@@ -103,9 +87,11 @@ export function TripCostSummary({ result }: { result: RouteAnalysisResult }) {
       lines.push(`Fuel need (${estimate.fuel.assumedFuelType}): ${estimate.fuel.litersNeeded.toFixed(1)} L`);
       lines.push(`Fuel estimate: ${estimate.fuel.estimatedFuelCostEur.toFixed(2)} EUR`);
     }
-    if (estimate.fuel?.bestTopUpCountryCode) {
+    if (estimate.fuel?.fuelStrategy) {
+      lines.push(`Fuel strategy: ${estimate.fuel.fuelStrategy}`);
+    } else if (estimate.fuel?.bestTopUpCountryCode) {
       lines.push(
-        `Best top-up: ${COUNTRY_LABELS[estimate.fuel.bestTopUpCountryCode]} (${estimate.fuel.bestTopUpPriceEurPerLiter?.toFixed(2)} EUR/L)`,
+        `Cheapest fuel: ${COUNTRY_LABELS[estimate.fuel.bestTopUpCountryCode]} (${estimate.fuel.bestTopUpPriceEurPerLiter?.toFixed(2)} EUR/L). Plan stops based on tank range (${estimate.fuel.estimatedRangePerFullTankKm} km).`,
       );
     }
     return lines.join("\n");
@@ -133,7 +119,17 @@ export function TripCostSummary({ result }: { result: RouteAnalysisResult }) {
   return (
     <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-base font-semibold text-zinc-900">{t("tripBudget.title")}</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-base font-semibold text-zinc-900">{t("tripBudget.title")}</h3>
+          {(() => {
+            const { label, isStale } = getOldestUpdateDate();
+            return (
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${isStale ? "bg-amber-100 text-amber-800" : "bg-zinc-100 text-zinc-600"}`}>
+                {isStale ? "\u26A0 " : ""}Data: {label}
+              </span>
+            );
+          })()}
+        </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -185,14 +181,24 @@ export function TripCostSummary({ result }: { result: RouteAnalysisResult }) {
           </>
         ) : null}
       </div>
-      {copyState === "copied" ? <p className="mt-2 text-xs text-emerald-700">{t("tripBudget.copied")}</p> : null}
-      {copyState === "error" ? <p className="mt-2 text-xs text-red-700">{t("tripBudget.copyError")}</p> : null}
+      <div aria-live="polite" className="mt-2">
+        {copyState === "copied" ? <p className="text-xs text-emerald-700">{t("tripBudget.copied")}</p> : null}
+        {copyState === "error" ? <p className="text-xs text-red-700">{t("tripBudget.copyError")}</p> : null}
+      </div>
 
-      {estimate.fuel?.bestTopUpCountryCode ? (
-        <p className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
-          {t("tripBudget.bestTopUp")}: {COUNTRY_LABELS[estimate.fuel.bestTopUpCountryCode]} at about{" "}
-          {estimate.fuel.bestTopUpPriceEurPerLiter?.toFixed(2)} EUR/L.
-        </p>
+      {estimate.fuel?.fuelStrategy ? (
+        <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-900">
+          <p className="font-semibold">⛽ Fuel strategy</p>
+          <p className="mt-1 leading-relaxed">{estimate.fuel.fuelStrategy}</p>
+        </div>
+      ) : estimate.fuel?.bestTopUpCountryCode ? (
+        <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-900">
+          <p className="font-semibold">⛽ Cheapest fuel found</p>
+          <p className="mt-1">
+            {COUNTRY_LABELS[estimate.fuel.bestTopUpCountryCode]} ({estimate.fuel.bestTopUpPriceEurPerLiter?.toFixed(2)} EUR/L).
+            Plan stops accordingly based on your tank range ({estimate.fuel.estimatedRangePerFullTankKm} km).
+          </p>
+        </div>
       ) : null}
       {estimate.electric?.bestChargeCountryCode ? (
         <p className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">

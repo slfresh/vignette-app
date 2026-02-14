@@ -1,27 +1,50 @@
 @import "tailwindcss";
 
+/*
+ * Configure Tailwind dark: variant to use .theme-dark class.
+ * Components can now use dark:bg-gray-900, dark:text-white etc.
+ * directly in JSX instead of adding CSS overrides here.
+ */
+@custom-variant dark (&:where(.theme-dark, .theme-dark *));
+
+/* ─── Semantic color tokens ─── */
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --surface: #ffffff;
+  --surface-muted: #f4f4f5;
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
+  --text-primary: #18181b;
+  --text-secondary: #3f3f46;
+  --text-muted: #71717a;
+}
+
+html.theme-dark {
+  --background: #0b1220;
+  --foreground: #e5e7eb;
+  --surface: #111827;
+  --surface-muted: #0f172a;
+  --border: #374151;
+  --border-strong: #374151;
+  --text-primary: #e5e7eb;
+  --text-secondary: #e5e7eb;
+  --text-muted: #9ca3af;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border-theme: var(--border);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: #f5f7fb;
-  color: #18181b;
+  background: var(--background);
+  color: var(--text-primary);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
@@ -35,11 +58,16 @@ code {
   padding: 0.1rem 0.3rem;
 }
 
-html.theme-dark body {
-  background: #0b1220;
-  color: #e5e7eb;
-}
-
+/*
+ * Dark mode overrides for Tailwind utility classes.
+ *
+ * These exist for backwards compatibility -- components that don't yet use
+ * dark: variants or CSS variables still get themed correctly.
+ *
+ * Migration path: replace these one-by-one by adding dark: classes directly
+ * in component JSX (e.g. bg-white dark:bg-gray-900) and then removing the
+ * override here.
+ */
 html.theme-dark .bg-white {
   background-color: #111827 !important;
 }
@@ -61,12 +89,28 @@ html.theme-dark .bg-sky-50 {
 }
 
 html.theme-dark .bg-emerald-50 {
-  background-color: #10251d !important;
+  background-color: #0d2818 !important;
+}
+
+html.theme-dark .bg-emerald-100 {
+  background-color: #132f1e !important;
+}
+
+html.theme-dark .bg-amber-50 {
+  background-color: #1c1708 !important;
+}
+
+html.theme-dark .bg-amber-100 {
+  background-color: #292211 !important;
+}
+
+html.theme-dark .bg-red-100 {
+  background-color: #2a1515 !important;
 }
 
 html.theme-dark .border-zinc-200,
 html.theme-dark .border-zinc-300 {
-  border-color: #374151 !important;
+  border-color: var(--border) !important;
 }
 
 html.theme-dark .border-sky-200,
@@ -86,27 +130,45 @@ html.theme-dark .border-emerald-200 {
   border-color: #2d5b45 !important;
 }
 
+html.theme-dark .border-amber-200 {
+  border-color: #78631d !important;
+}
+
 html.theme-dark .text-zinc-900,
 html.theme-dark .text-zinc-800,
 html.theme-dark .text-zinc-700 {
-  color: #e5e7eb !important;
+  color: var(--text-primary) !important;
 }
 
 html.theme-dark .text-zinc-600,
 html.theme-dark .text-zinc-500 {
-  color: #9ca3af !important;
+  color: var(--text-muted) !important;
 }
 
 html.theme-dark .text-blue-700 {
   color: #93c5fd !important;
 }
 
-html.theme-dark .text-emerald-700 {
+html.theme-dark .text-emerald-700,
+html.theme-dark .text-emerald-900 {
   color: #6ee7b7 !important;
 }
 
-html.theme-dark .text-red-700 {
+html.theme-dark .text-emerald-800 {
+  color: #a7f3d0 !important;
+}
+
+html.theme-dark .text-red-700,
+html.theme-dark .text-red-800 {
   color: #fca5a5 !important;
+}
+
+html.theme-dark .text-amber-800 {
+  color: #fcd34d !important;
+}
+
+html.theme-dark .text-amber-900 {
+  color: #fde68a !important;
 }
 
 html.theme-dark .text-orange-900,
@@ -117,4 +179,32 @@ html.theme-dark .text-sky-950 {
 
 html.theme-dark code {
   background: #1f2937;
+}
+
+/* ─── Leaflet popup ─── */
+.leaflet-popup-content-wrapper {
+  background: #fff;
+  color: #18181b;
+}
+.leaflet-popup-content {
+  margin: 12px 16px;
+}
+
+/* ─── Fullscreen map overlay ─── */
+html.theme-dark .map-fullscreen {
+  background-color: #0f172a !important;
+}
+html.theme-dark .map-fullscreen-header {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+html.theme-dark .map-fullscreen-header button {
+  background-color: #334155 !important;
+  border-color: #475569 !important;
+  color: #e2e8f0 !important;
+}
+html.theme-dark .map-fullscreen-header button:hover {
+  background-color: #475569 !important;
+  border-color: #64748b !important;
 }

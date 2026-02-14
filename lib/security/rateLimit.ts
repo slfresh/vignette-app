@@ -9,11 +9,28 @@ type RateLimitBucket = {
 const RATE_LIMIT_STORE = new Map<string, RateLimitBucket>();
 const REDIS_LIMITERS = new Map<string, Ratelimit>();
 
+/**
+ * Extract client IP from request headers.
+ *
+ * TRUSTED_PROXY_HOPS controls which IP from x-forwarded-for to trust:
+ *   - 1 (default): use the rightmost (last) IP, added by the closest reverse proxy.
+ *   - 0: use x-real-ip or cf-connecting-ip instead of x-forwarded-for.
+ *
+ * Using the rightmost IP prevents spoofing because clients can only prepend
+ * to x-forwarded-for, not append after the proxy's entry.
+ */
 function getClientIp(request: Request): string {
+  const trustedHops = Math.max(0, Number(process.env.TRUSTED_PROXY_HOPS) || 1);
+
   const forwardedFor = request.headers.get("x-forwarded-for");
-  if (forwardedFor) {
-    return forwardedFor.split(",")[0]?.trim() || "unknown";
+  if (forwardedFor && trustedHops > 0) {
+    const ips = forwardedFor.split(",").map((ip) => ip.trim()).filter(Boolean);
+    // Pick the IP that is `trustedHops` from the right end of the chain.
+    // With 1 trusted proxy hop, this is the rightmost (last) IP.
+    const targetIndex = Math.max(0, ips.length - trustedHops);
+    return ips[targetIndex] || "unknown";
   }
+
   return request.headers.get("x-real-ip") || request.headers.get("cf-connecting-ip") || "unknown";
 }
 

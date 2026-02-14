@@ -1,8 +1,10 @@
 "use client";
 
+import { useMemo } from "react";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import { OFFICIAL_LINKS, SECTION_TOLL_LINKS } from "@/lib/config/officialLinks";
-import type { RouteAnalysisResult } from "@/types/vignette";
+import { getCameraPinsForCrossings } from "@/lib/border/cameraPins";
+import type { CountryCode, RouteAnalysisResult } from "@/types/vignette";
 import { AlertTriangle, CheckCircle2, Clock3, ExternalLink, ShieldCheck } from "lucide-react";
 
 function getUrbanZoneLink(countryCode: string): string | null {
@@ -31,6 +33,21 @@ function scoreClasses(level: "high" | "medium" | "low"): string {
 export function TripReadinessPanel({ result }: { result: RouteAnalysisResult }) {
   const { t } = useI18n();
   const readiness = result.tripReadiness;
+
+  // Build a lookup: "HR→BA" → "Bijača / Nova Sela" for showing crossing names in timeline
+  const crossingLabelMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (!result.borderCrossings?.length) return map;
+    const pins = getCameraPinsForCrossings(result.borderCrossings);
+    for (const pin of pins) {
+      const key = `${pin.countryCodeFrom}→${pin.countryCodeTo}`;
+      if (pin.nearestCameraLabel) {
+        map.set(key, pin.nearestCameraLabel);
+      }
+    }
+    return map;
+  }, [result.borderCrossings]);
+
   if (!readiness) {
     return null;
   }
@@ -50,8 +67,38 @@ export function TripReadinessPanel({ result }: { result: RouteAnalysisResult }) 
       <div className="mt-3 rounded-md border border-zinc-200 bg-zinc-50 p-3">
         <p className="text-sm font-semibold text-zinc-900">{t("readiness.routeTimeline")}</p>
         <ul className="mt-2 space-y-2 text-sm text-zinc-800">
-          {readiness.timeline.map((entry) => (
-            <li key={`${entry.countryCode}-${entry.label}`} className="rounded border border-zinc-200 bg-white p-2">
+          {readiness.timeline.map((entry, entryIndex) => {
+            // Show a border crossing indicator between consecutive countries
+            const previousEntry = entryIndex > 0 ? readiness.timeline[entryIndex - 1] : null;
+            const crossingLabel = previousEntry
+              ? crossingLabelMap.get(`${previousEntry.countryCode}→${entry.countryCode}`)
+              : null;
+
+            return (
+              <li key={`${entry.countryCode}-${entry.label}`}>
+                {/* Border crossing indicator between countries */}
+                {crossingLabel && (
+                  <div className="mb-2 flex items-center gap-2 px-1 text-xs text-zinc-500">
+                    <span className="h-px flex-1 bg-zinc-200" />
+                    <span className="whitespace-nowrap font-medium">
+                      🚧 {crossingLabel}
+                    </span>
+                    <span className="h-px flex-1 bg-zinc-200" />
+                  </div>
+                )}
+                {/* If there was a crossing but no camera label, still show a generic crossing line */}
+                {!crossingLabel && previousEntry && result.borderCrossings?.some(
+                  (bc) => bc.countryCodeFrom === previousEntry.countryCode && bc.countryCodeTo === entry.countryCode
+                ) && (
+                  <div className="mb-2 flex items-center gap-2 px-1 text-xs text-zinc-500">
+                    <span className="h-px flex-1 bg-zinc-200" />
+                    <span className="whitespace-nowrap font-medium">
+                      🚧 Border crossing
+                    </span>
+                    <span className="h-px flex-1 bg-zinc-200" />
+                  </div>
+                )}
+                <div className="rounded border border-zinc-200 bg-white p-2">
               <p className="font-medium">
                 {entry.label} ({entry.countryCode})
                 {entry.estimatedCostEur ? <span className="ml-2 text-zinc-500">~{entry.estimatedCostEur.toFixed(2)} EUR</span> : null}
@@ -110,8 +157,10 @@ export function TripReadinessPanel({ result }: { result: RouteAnalysisResult }) 
                     ))}
                 </div>
               </details>
-            </li>
-          ))}
+                </div>
+              </li>
+            );
+          })}
         </ul>
       </div>
 

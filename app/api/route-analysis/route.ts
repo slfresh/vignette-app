@@ -1,7 +1,13 @@
 import { applyCountryRules } from "@/lib/routing/applyCountryRules";
+import { geocodeAddressCache } from "@/lib/cache/geocodeCache";
 import { checkRateLimit } from "@/lib/security/rateLimit";
+import { logger } from "@/lib/logging/logger";
+import {
+  routeAnalysisRequestSchema,
+  formatZodErrors,
+} from "@/lib/validation/schemas";
 import type { OrsDirectionsResponse } from "@/lib/routing/orsTypes";
-import type { RouteAnalysisRequest, RoutePoint } from "@/types/vignette";
+import type { RoutePoint } from "@/types/vignette";
 import { NextResponse } from "next/server";
 
 const ORS_DIRECTIONS_URL = "https://api.openrouteservice.org/v2/directions/driving-car/geojson";
@@ -64,11 +70,19 @@ function normalizeProvidedPoint(point: RoutePoint | undefined): RoutePoint | nul
 }
 
 async function geocodeAddress(query: string): Promise<RoutePoint> {
+  // Check cache first to avoid redundant API calls
+  const cacheKey = query.trim().toLowerCase();
+  const cached = geocodeAddressCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   const orsApiKey = process.env.ORS_API_KEY?.trim();
   if (orsApiKey) {
     try {
       const orsPoint = await geocodeAddressWithOrs(query, orsApiKey);
       if (isLikelyEurope(orsPoint)) {
+        geocodeAddressCache.set(cacheKey, orsPoint);
         return orsPoint;
       }
     } catch {
@@ -79,24 +93,31 @@ async function geocodeAddress(query: string): Promise<RoutePoint> {
   try {
     const photonPoint = await geocodeAddressWithPhoton(query);
     if (isLikelyEurope(photonPoint)) {
+      geocodeAddressCache.set(cacheKey, photonPoint);
       return photonPoint;
     }
   } catch {
     // Continue to next fallback.
   }
 
-  const nominatimPoint = await geocodeAddressWithNominatim(query);
-  if (isLikelyEurope(nominatimPoint)) {
-    return nominatimPoint;
+  try {
+    const nominatimPoint = await geocodeAddressWithNominatim(query);
+    if (isLikelyEurope(nominatimPoint)) {
+      geocodeAddressCache.set(cacheKey, nominatimPoint);
+      return nominatimPoint;
+    }
+  } catch {
+    throw new Error(`Could not resolve "${query}". Check spelling or try a more specific name with country (e.g., "Lyon, France").`);
   }
 
-  throw new Error(`Could not confidently resolve "${query}" in Europe. Try adding country (e.g., "Luter, France").`);
+  throw new Error(`Could not confidently locate "${query}" in Europe. Try adding a country name (e.g., "Luter, France").`);
 }
 
 async function geocodeAddressWithOrs(query: string, apiKey: string): Promise<RoutePoint> {
-  const url = `${ORS_GEOCODE_URL}?api_key=${encodeURIComponent(apiKey)}&text=${encodeURIComponent(query)}&size=1`;
+  const url = `${ORS_GEOCODE_URL}?text=${encodeURIComponent(query)}&size=1`;
   const response = await fetch(url, {
     cache: "no-store",
+    headers: { Authorization: apiKey },
   });
 
   if (!response.ok) {
@@ -174,15 +195,27 @@ async function resolveLocation(input: string): Promise<RoutePoint> {
   return geocodeAddress(input);
 }
 
-function jsonError(message: string, status: number) {
-  return NextResponse.json({ error: message }, { status });
+/**
+ * Return a structured JSON error response with:
+ * - error: human-readable message for display
+ * - code: machine-readable code for programmatic handling
+ */
+function jsonError(message: string, status: number, code?: string) {
+  return NextResponse.json({ error: message, code: code ?? "UNKNOWN" }, { status });
 }
 
 export async function POST(request: Request) {
+  const requestId = crypto.randomUUID().slice(0, 8);
+  const startTime = Date.now();
+
   const rateLimit = await checkRateLimit(request, "route-analysis", 30, 60_000);
   if (!rateLimit.allowed) {
+    logger.warn("Rate limit hit", { requestId, scope: "route-analysis" });
     return NextResponse.json(
-      { error: "Too many route requests. Please wait and try again." },
+      {
+        error: "Too many route requests. Please wait and try again.",
+        code: "RATE_LIMITED",
+      },
       {
         status: 429,
         headers: {
@@ -193,25 +226,23 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as RouteAnalysisRequest;
-    if (!body.start?.trim() || !body.end?.trim()) {
-      return jsonError("Start and end are required.", 400);
-    }
-    if (body.start.length > 180 || body.end.length > 180) {
-      return jsonError("Start or destination is too long. Please shorten the input.", 400);
-    }
-    if (
-      body.grossWeightKg !== undefined &&
-      (!Number.isFinite(body.grossWeightKg) || body.grossWeightKg <= 0 || body.grossWeightKg > 60_000)
-    ) {
-      return jsonError("Gross weight must be between 1 and 60000 kg.", 400);
-    }
-    if (body.axles !== undefined && (!Number.isFinite(body.axles) || body.axles < 1 || body.axles > 8)) {
-      return jsonError("Axles must be between 1 and 8.", 400);
+    // Parse and validate the request body with Zod
+    const rawBody: unknown = await request.json();
+    const parseResult = routeAnalysisRequestSchema.safeParse(rawBody);
+
+    if (!parseResult.success) {
+      return jsonError(formatZodErrors(parseResult.error), 400, "VALIDATION_ERROR");
     }
 
+    const body = parseResult.data;
+    logger.info("Route analysis started", { requestId, from: body.start, to: body.end });
+
     if (!process.env.ORS_API_KEY) {
-      return jsonError("Server is missing ORS_API_KEY.", 500);
+      return jsonError(
+        "The server is not configured for routing. Please contact the site operator.",
+        500,
+        "MISSING_API_KEY",
+      );
     }
 
     const providedStart = normalizeProvidedPoint(body.startPoint);
@@ -254,18 +285,37 @@ export async function POST(request: Request) {
     if (!orsResponse.ok) {
       if (orsResponse.status === 401 || orsResponse.status === 403) {
         return jsonError(
-          "OpenRouteService key is invalid or does not have access to Directions API. Verify your key and restrictions in ORS dashboard.",
+          "The routing service rejected the API key. Please contact the site operator.",
           502,
+          "ORS_AUTH_FAILED",
         );
       }
       if (orsResponse.status === 404 && body.avoidTolls) {
-        return jsonError("No route found with current avoid-tolls preference. Try disabling 'Avoid toll roads'.", 400);
+        return jsonError(
+          "No route found while avoiding toll roads. Try disabling 'Avoid toll roads' or choose different locations.",
+          400,
+          "NO_ROUTE_AVOID_TOLLS",
+        );
       }
       if (orsResponse.status === 400) {
-        return jsonError("Could not build route from current locations. Try more specific place names with country.", 400);
+        return jsonError(
+          "Could not build a route between these locations. Try more specific place names including the country (e.g., \"Munich, Germany\").",
+          400,
+          "NO_ROUTE",
+        );
       }
-      const status = orsResponse.status === 429 ? 429 : 502;
-      return jsonError(`Routing provider returned ${orsResponse.status}.`, status);
+      if (orsResponse.status === 429) {
+        return jsonError(
+          "The routing service is temporarily busy. Please wait a moment and try again.",
+          429,
+          "ORS_RATE_LIMITED",
+        );
+      }
+      return jsonError(
+        `The routing service returned an unexpected error (${orsResponse.status}). Please try again later.`,
+        502,
+        "ORS_ERROR",
+      );
     }
 
     const routePayload = (await orsResponse.json()) as OrsDirectionsResponse;
@@ -280,14 +330,33 @@ export async function POST(request: Request) {
       emissionClass: body.powertrainType === "ELECTRIC" ? "ZERO_EMISSION" : body.emissionClass ?? "UNKNOWN",
     };
 
+    const durationMs = Date.now() - startTime;
+    logger.info("Route analysis completed", {
+      requestId,
+      durationMs,
+      countries: result.countries?.length ?? 0,
+    });
+
     return NextResponse.json(result);
   } catch (error) {
+    const durationMs = Date.now() - startTime;
     if (error instanceof Error && error.name === "AbortError") {
-      return jsonError("Route analysis timed out. Please try again.", 504);
+      logger.error("Route analysis timed out", { requestId, durationMs, code: "TIMEOUT" });
+      return jsonError(
+        "Route analysis timed out. The routing service may be slow — please try again.",
+        504,
+        "TIMEOUT",
+      );
+    }
+    if (error instanceof SyntaxError) {
+      logger.warn("Invalid request body", { requestId, durationMs, code: "INVALID_JSON" });
+      return jsonError("Invalid request format. Please refresh the page and try again.", 400, "INVALID_JSON");
     }
     if (error instanceof Error) {
-      return jsonError(error.message, 400);
+      logger.error("Route analysis failed", { requestId, durationMs, code: "GEOCODE_ERROR", message: error.message });
+      return jsonError(error.message, 400, "GEOCODE_ERROR");
     }
-    return jsonError("Unexpected server error.", 500);
+    logger.error("Unexpected error", { requestId, durationMs, code: "INTERNAL_ERROR" });
+    return jsonError("An unexpected error occurred. Please try again later.", 500, "INTERNAL_ERROR");
   }
 }

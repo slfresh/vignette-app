@@ -23,6 +23,7 @@ export type TranslationKey =
   | "tripShield.freeFlowNo"
   | "tripShield.urbanRiskYes"
   | "tripShield.urbanRiskNo"
+  | "tripShield.showBorderCameras"
   | "tripShield.borderWaitTitle"
   | "tripShield.borderWaitFallback"
   | "tripShield.borderWaitLoading"
@@ -107,6 +108,8 @@ export type TranslationKey =
   | "form.channel.ferry"
   | "form.channel.tunnel"
   | "form.avoidTolls"
+  | "form.showAdvanced"
+  | "form.hideAdvanced"
   | "form.submit"
   | "form.error.startEndRequired"
   | "form.error.grossWeight"
@@ -137,7 +140,11 @@ export type TranslationKey =
   | "legal.disclaimer.p1"
   | "legal.disclaimer.p2"
   | "legal.disclaimer.p3"
-  | "legal.disclaimer.p4";
+  | "legal.disclaimer.p4"
+  | "consent.title"
+  | "consent.description"
+  | "consent.accept"
+  | "consent.reject";
 
 export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>>> = {
   en: {
@@ -155,6 +162,7 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "tripShield.freeFlowNo": "Free-flow toll risk: No",
     "tripShield.urbanRiskYes": "Urban zone charge risk: Yes",
     "tripShield.urbanRiskNo": "Urban zone charge risk: No",
+    "tripShield.showBorderCameras": "Show border cameras on map",
     "tripShield.borderWaitTitle": "Check live border wait times",
     "tripShield.borderWaitFallback": "Use official border agency traffic pages for real-time wait conditions on your route.",
     "tripShield.borderWaitLoading": "Loading wait-time feed...",
@@ -239,6 +247,8 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "form.channel.ferry": "Prefer ferry",
     "form.channel.tunnel": "Prefer Eurotunnel",
     "form.avoidTolls": "Avoid toll roads where possible",
+    "form.showAdvanced": "Show advanced options",
+    "form.hideAdvanced": "Hide advanced options",
     "form.submit": "Calculate route",
     "form.error.startEndRequired": "Please provide both start and destination.",
     "form.error.grossWeight": "Gross weight must be a positive number.",
@@ -250,7 +260,7 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "card.pricesFor": "Prices shown for",
     "card.col.product": "Product",
     "card.col.price": "Price",
-    "card.noTable": "No standard passenger car national vignette price table.",
+    "card.noTable": "No vignette pricing available for this country.",
     "card.buyOfficial": "Buy on official site",
     "legal.imprint.title": "Imprint",
     "legal.imprint.blocker": "Pre-launch blocker: legal provider details are placeholders. Fill LEGAL_* env values before publishing.",
@@ -270,6 +280,10 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "legal.disclaimer.p2": "Content is prepared carefully, but we cannot guarantee complete accuracy, completeness, or current validity of toll prices and legal rules.",
     "legal.disclaimer.p3": "We are not responsible for the content of external websites linked as official sources, provided no illegal content was known at link time.",
     "legal.disclaimer.p4": "No purchase contract is concluded on this website. Transactions and terms are handled by the respective official provider.",
+    "consent.title": "Cookie consent",
+    "consent.description": "We only load optional affiliate or analytics tracking after consent, as required by TDDDG.",
+    "consent.accept": "Accept",
+    "consent.reject": "Reject",
   },
   de: {
     "header.unofficial": "Inoffizielles Informationsportal",
@@ -286,6 +300,7 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "tripShield.freeFlowNo": "Free-Flow Mautrisiko: Nein",
     "tripShield.urbanRiskYes": "Stadtzonen-Risiko: Ja",
     "tripShield.urbanRiskNo": "Stadtzonen-Risiko: Nein",
+    "tripShield.showBorderCameras": "Grenzkameras auf der Karte anzeigen",
     "tripShield.borderWaitTitle": "Live-Grenzwartezeiten pruefen",
     "tripShield.borderWaitFallback": "Nutzen Sie offizielle Grenzverkehrsseiten fuer aktuelle Wartezeiten.",
     "tripShield.borderWaitLoading": "Wartezeitdaten werden geladen...",
@@ -370,6 +385,8 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "form.channel.ferry": "Faehre bevorzugen",
     "form.channel.tunnel": "Eurotunnel bevorzugen",
     "form.avoidTolls": "Mautstrassen wenn moeglich vermeiden",
+    "form.showAdvanced": "Erweiterte Optionen anzeigen",
+    "form.hideAdvanced": "Erweiterte Optionen ausblenden",
     "form.submit": "Route berechnen",
     "form.error.startEndRequired": "Bitte Start und Ziel angeben.",
     "form.error.grossWeight": "Das Gesamtgewicht muss eine positive Zahl sein.",
@@ -381,7 +398,7 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "card.pricesFor": "Preise angezeigt fuer",
     "card.col.product": "Produkt",
     "card.col.price": "Preis",
-    "card.noTable": "Keine nationale Standard-Preistabelle fuer Pkw-Vignetten vorhanden.",
+    "card.noTable": "Keine Vignettenpreise fuer dieses Land verfuegbar.",
     "card.buyOfficial": "Auf offizieller Seite kaufen",
     "legal.imprint.title": "Impressum",
     "legal.imprint.blocker": "Pre-Launch-Blocker: Rechtliche Anbieterangaben sind Platzhalter. Fuellen Sie LEGAL_* Umgebungswerte vor der Veroeffentlichung.",
@@ -401,6 +418,10 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "legal.disclaimer.p2": "Inhalte werden sorgfaeltig erstellt, dennoch koennen wir keine Gewaehr fuer Richtigkeit, Vollstaendigkeit oder Aktualitaet von Mautpreisen und Regelungen uebernehmen.",
     "legal.disclaimer.p3": "Fuer Inhalte externer verlinkter Seiten als offizielle Quellen haften wir nicht, sofern uns zum Zeitpunkt der Verlinkung keine rechtswidrigen Inhalte bekannt waren.",
     "legal.disclaimer.p4": "Auf dieser Website wird kein Kaufvertrag geschlossen. Transaktionen und Bedingungen erfolgen beim jeweiligen offiziellen Anbieter.",
+    "consent.title": "Cookie-Einwilligung",
+    "consent.description": "Optionale Affiliate- oder Analysetools werden nur nach Einwilligung geladen, wie vom TDDDG gefordert.",
+    "consent.accept": "Akzeptieren",
+    "consent.reject": "Ablehnen",
   },
   tr: {
     "header.unofficial": "Resmi olmayan bilgi portali",
@@ -417,6 +438,7 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "tripShield.freeFlowNo": "Serbest gecis ucret riski: Hayir",
     "tripShield.urbanRiskYes": "Sehir bolgesi ucret riski: Evet",
     "tripShield.urbanRiskNo": "Sehir bolgesi ucret riski: Hayir",
+    "tripShield.showBorderCameras": "Haritada sinir kameralarini goster",
     "tripShield.borderWaitTitle": "Canli sinir bekleme suresi",
     "tripShield.borderWaitFallback": "Gercek zamanli bekleme icin resmi sinir trafik sayfalarini kullanin.",
     "tripShield.borderWaitLoading": "Bekleme suresi verisi yukleniyor...",
@@ -501,6 +523,8 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "form.channel.ferry": "Feribotu tercih et",
     "form.channel.tunnel": "Eurotunnel tercih et",
     "form.avoidTolls": "Mumkunse ucretli yollardan kacinin",
+    "form.showAdvanced": "Gelismis secenekleri goster",
+    "form.hideAdvanced": "Gelismis secenekleri gizle",
     "form.submit": "Rotayi hesapla",
     "form.error.startEndRequired": "Lutfen baslangic ve varis girin.",
     "form.error.grossWeight": "Toplam agirlik pozitif bir sayi olmali.",
@@ -512,7 +536,7 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "card.pricesFor": "Fiyatlar su arac icin",
     "card.col.product": "Urun",
     "card.col.price": "Fiyat",
-    "card.noTable": "Standart binek arac ulusal vinyet fiyat tablosu yok.",
+    "card.noTable": "Bu ulke icin vinyet fiyatlandirmasi mevcut degil.",
     "card.buyOfficial": "Resmi siteden satin al",
     "legal.imprint.title": "Yasal Bilgiler",
     "legal.imprint.blocker": "Yayin oncesi engel: yasal saglayici bilgileri hala yer tutucu. Yayinlamadan once LEGAL_* ortam degiskenlerini doldurun.",
@@ -532,6 +556,10 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "legal.disclaimer.p2": "Icerikler dikkatle hazirlansa da gecis ucretleri ve yasal kurallarin dogrulugu, tamligi veya guncelligi garanti edilemez.",
     "legal.disclaimer.p3": "Resmi kaynak olarak baglantisi verilen harici sitelerin iceriginden sorumlu degiliz; baglanti aninda yasa disi icerik bilinmiyorsa sorumluluk dogmaz.",
     "legal.disclaimer.p4": "Bu web sitesinde satin alma sozlesmesi kurulmaz. Islem ve kosullar ilgili resmi saglayici tarafindan yurutilur.",
+    "consent.title": "Cerez onay",
+    "consent.description": "Istege bagli ortaklik veya analiz takibi yalnizca onay sonrasinda yuklenir (TDDDG geregi).",
+    "consent.accept": "Kabul et",
+    "consent.reject": "Reddet",
   },
   pl: {
     "header.unofficial": "Niezalezny portal informacyjny",
@@ -548,6 +576,7 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "tripShield.freeFlowNo": "Ryzyko free-flow: Nie",
     "tripShield.urbanRiskYes": "Ryzyko stref miejskich: Tak",
     "tripShield.urbanRiskNo": "Ryzyko stref miejskich: Nie",
+    "tripShield.showBorderCameras": "Pokaz kamery graniczne na mapie",
     "tripShield.borderWaitTitle": "Sprawdz czas oczekiwania na granicy",
     "tripShield.borderWaitFallback": "Uzyj oficjalnych stron granicznych dla czasu rzeczywistego.",
     "tripShield.borderWaitLoading": "Ladowanie danych o czasie oczekiwania...",
@@ -632,6 +661,8 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "form.channel.ferry": "Preferuj prom",
     "form.channel.tunnel": "Preferuj Eurotunnel",
     "form.avoidTolls": "Unikaj drog platnych, jesli to mozliwe",
+    "form.showAdvanced": "Pokaz opcje zaawansowane",
+    "form.hideAdvanced": "Ukryj opcje zaawansowane",
     "form.submit": "Oblicz trase",
     "form.error.startEndRequired": "Podaj punkt startu i cel.",
     "form.error.grossWeight": "Masa calkowita musi byc dodatnia liczba.",
@@ -643,7 +674,7 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "card.pricesFor": "Ceny dla pojazdu",
     "card.col.product": "Produkt",
     "card.col.price": "Cena",
-    "card.noTable": "Brak standardowej krajowej tabeli cen winiet dla samochodow osobowych.",
+    "card.noTable": "Brak danych o cenach winiet dla tego kraju.",
     "card.buyOfficial": "Kup na oficjalnej stronie",
     "legal.imprint.title": "Dane prawne",
     "legal.imprint.blocker": "Blokada przed publikacja: dane podmiotu prawnego sa placeholderami. Uzupelnij wartosci LEGAL_* przed wdrozeniem.",
@@ -663,6 +694,10 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "legal.disclaimer.p2": "Tresci sa przygotowywane starannie, ale nie gwarantujemy pelnej poprawnosci, kompletnosci ani aktualnosci cen oplat i przepisow.",
     "legal.disclaimer.p3": "Nie odpowiadamy za tresci zewnetrznych stron podlinkowanych jako zrodla oficjalne, o ile w chwili linkowania nie byly znane tresci nielegalne.",
     "legal.disclaimer.p4": "Na tej stronie nie dochodzi do zawarcia umowy zakupu. Transakcje i warunki obsluguje odpowiedni oficjalny dostawca.",
+    "consent.title": "Zgoda na pliki cookie",
+    "consent.description": "Opcjonalne sledzenie afiliacyjne lub analityczne jest ladowane dopiero po wyrazeniu zgody (TDDDG).",
+    "consent.accept": "Akceptuj",
+    "consent.reject": "Odrzuc",
   },
   ro: {
     "header.unofficial": "Portal informativ neoficial",
@@ -679,6 +714,7 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "tripShield.freeFlowNo": "Risc free-flow: Nu",
     "tripShield.urbanRiskYes": "Risc taxe urbane: Da",
     "tripShield.urbanRiskNo": "Risc taxe urbane: Nu",
+    "tripShield.showBorderCameras": "Arata camerele de frontiera pe harta",
     "tripShield.borderWaitTitle": "Verifica timpii de asteptare la frontiera",
     "tripShield.borderWaitFallback": "Foloseste paginile oficiale pentru timpi in timp real.",
     "tripShield.borderWaitLoading": "Se incarca fluxul de timpi de asteptare...",
@@ -763,6 +799,8 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "form.channel.ferry": "Prefer feribot",
     "form.channel.tunnel": "Prefer Eurotunnel",
     "form.avoidTolls": "Evita drumurile cu taxa unde este posibil",
+    "form.showAdvanced": "Arata optiuni avansate",
+    "form.hideAdvanced": "Ascunde optiuni avansate",
     "form.submit": "Calculeaza ruta",
     "form.error.startEndRequired": "Te rugam sa introduci punctul de pornire si destinatia.",
     "form.error.grossWeight": "Greutatea totala trebuie sa fie un numar pozitiv.",
@@ -774,7 +812,7 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "card.pricesFor": "Preturi afisate pentru",
     "card.col.product": "Produs",
     "card.col.price": "Pret",
-    "card.noTable": "Nu exista tabel standard national de preturi pentru vigneta auto.",
+    "card.noTable": "Nu sunt disponibile preturi de vigneta pentru aceasta tara.",
     "card.buyOfficial": "Cumpara de pe site-ul oficial",
     "legal.imprint.title": "Informatii legale",
     "legal.imprint.blocker": "Blocant pre-lansare: detaliile furnizorului legal sunt placeholder. Completeaza variabilele LEGAL_* inainte de publicare.",
@@ -794,5 +832,9 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "legal.disclaimer.p2": "Continutul este pregatit cu atentie, dar nu putem garanta acuratetea completa, caracterul complet sau actualitatea preturilor de taxa si a regulilor legale.",
     "legal.disclaimer.p3": "Nu suntem responsabili pentru continutul site-urilor externe linkate ca surse oficiale, daca la momentul linkarii nu erau cunoscute continuturi ilegale.",
     "legal.disclaimer.p4": "Pe acest website nu se incheie niciun contract de cumparare. Tranzactiile si termenii sunt gestionate de furnizorul oficial relevant.",
+    "consent.title": "Consimtamant cookie",
+    "consent.description": "Urmarirea optionala de afiliere sau analiza se incarca doar dupa consimtamant (conform TDDDG).",
+    "consent.accept": "Accept",
+    "consent.reject": "Refuz",
   },
 };

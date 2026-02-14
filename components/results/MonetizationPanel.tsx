@@ -16,8 +16,14 @@ export function MonetizationPanel({ estimatedSavingsEuro }: { estimatedSavingsEu
       </p>
 
       {FEATURE_FLAGS.donationsEnabled ? (
-        <a className="mt-3 inline-block rounded-md bg-emerald-600 px-3 py-2 text-sm text-white" href="https://ko-fi.com/" target="_blank" rel="noreferrer noopener">
-          Support this tool (donation)
+        <a
+          className="mt-3 inline-flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
+          href="https://ko-fi.com/eurodrive"
+          target="_blank"
+          rel="noreferrer noopener"
+        >
+          ☕ Support EuroDrive
+          <span className="text-xs font-normal opacity-90">— help keep the servers running</span>
         </a>
       ) : null}
 

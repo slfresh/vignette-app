@@ -22,9 +22,16 @@ type BorderWaitRecord = {
 export function TripShieldPanel({
   tripShield,
   routeCountries = [],
+  showBorderCameras = false,
+  onShowBorderCamerasChange,
+  hasBorderCameraData = false,
 }: {
   tripShield?: TripShieldInsights;
   routeCountries?: CountryCode[];
+  showBorderCameras?: boolean;
+  onShowBorderCamerasChange?: (checked: boolean) => void;
+  /** Only show the camera checkbox when we have camera feeds for this route's crossings */
+  hasBorderCameraData?: boolean;
 }) {
   const { t } = useI18n();
   const borderSources = getBorderWaitSources(routeCountries);
@@ -96,6 +103,18 @@ export function TripShieldPanel({
           {boolLabel(shield.hasMajorUrbanZoneRisk, t("tripShield.urbanRiskYes"), t("tripShield.urbanRiskNo"))}
         </span>
       </div>
+
+      {shield.hasBorderCrossing && hasBorderCameraData && onShowBorderCamerasChange ? (
+        <label className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm text-sky-900">
+          <input
+            type="checkbox"
+            checked={showBorderCameras}
+            onChange={(event) => onShowBorderCamerasChange(event.target.checked)}
+            className="h-4 w-4 rounded border-sky-300 text-sky-600"
+          />
+          {t("tripShield.showBorderCameras")}
+        </label>
+      ) : null}
 
       {shield.warnings.length ? (
         <ul className="mt-3 space-y-2 text-sm text-sky-950">

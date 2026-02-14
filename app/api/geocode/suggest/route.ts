@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { checkRateLimit } from "@/lib/security/rateLimit";
+import { logger } from "@/lib/logging/logger";
+import { geocodeSuggestCache } from "@/lib/cache/geocodeCache";
+import { geocodeSuggestQuerySchema, formatZodErrors } from "@/lib/validation/schemas";
 
 const ORS_GEOCODE_URL = "https://api.openrouteservice.org/geocode/search";
 const PHOTON_GEOCODE_URL = "https://photon.komoot.io/api/";
@@ -113,6 +116,7 @@ function scoreLabel(
 export async function GET(request: Request) {
   const rateLimit = await checkRateLimit(request, "geocode-suggest", 80, 60_000);
   if (!rateLimit.allowed) {
+    logger.warn("Geocode suggest rate limit hit", { scope: "geocode-suggest" });
     return NextResponse.json(
       { suggestions: [], error: "Too many suggestion requests. Please pause typing briefly." },
       {
@@ -125,12 +129,29 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const query = searchParams.get("q")?.trim() ?? "";
-  if (query.length < 2) {
-    return NextResponse.json({ suggestions: [] });
+  const rawQuery = searchParams.get("q") ?? "";
+
+  // Validate the query parameter with Zod
+  const parseResult = geocodeSuggestQuerySchema.safeParse({ q: rawQuery });
+  if (!parseResult.success) {
+    // For autocomplete, return empty suggestions instead of an error when query is too short
+    const isTooShort = parseResult.error.issues.some((issue) => issue.code === "too_small");
+    if (isTooShort) {
+      return NextResponse.json({ suggestions: [] });
+    }
+    return NextResponse.json(
+      { suggestions: [], error: formatZodErrors(parseResult.error) },
+      { status: 400 },
+    );
   }
-  if (query.length > 120) {
-    return NextResponse.json({ suggestions: [], error: "Query too long." }, { status: 400 });
+
+  const query = parseResult.data.q;
+
+  // Check cache before making external API calls
+  const cacheKey = query.toLowerCase();
+  const cachedSuggestions = geocodeSuggestCache.get(cacheKey);
+  if (cachedSuggestions) {
+    return NextResponse.json({ suggestions: cachedSuggestions }, { status: 200 });
   }
 
   const orsApiKey = process.env.ORS_API_KEY?.trim();
@@ -138,8 +159,11 @@ export async function GET(request: Request) {
 
   if (orsApiKey) {
     try {
-      const orsUrl = `${ORS_GEOCODE_URL}?api_key=${encodeURIComponent(orsApiKey)}&text=${encodeURIComponent(query)}&size=8`;
-      const orsResponse = await fetch(orsUrl, { cache: "no-store" });
+      const orsUrl = `${ORS_GEOCODE_URL}?text=${encodeURIComponent(query)}&size=8`;
+      const orsResponse = await fetch(orsUrl, {
+        cache: "no-store",
+        headers: { Authorization: orsApiKey },
+      });
       if (orsResponse.ok) {
         const orsPayload = (await orsResponse.json()) as { features?: OrsFeature[] };
         for (const feature of orsPayload.features ?? []) {
@@ -224,6 +248,11 @@ export async function GET(request: Request) {
     if (preferred) {
       suggestions = [preferred, ...suggestions.filter((entry) => entry !== preferred)];
     }
+  }
+
+  // Cache the final suggestions for faster subsequent lookups
+  if (suggestions.length > 0) {
+    geocodeSuggestCache.set(cacheKey, suggestions);
   }
 
   return NextResponse.json({ suggestions }, { status: 200 });

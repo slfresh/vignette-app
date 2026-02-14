@@ -38,6 +38,8 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
       setLocaleState(next);
       if (typeof window !== "undefined") {
         window.localStorage.setItem(LOCALE_STORAGE_KEY, next);
+        // Also set a cookie so the server can read locale for html lang
+        document.cookie = `eurodrive-locale=${next};path=/;max-age=31536000;SameSite=Lax`;
       }
       if (typeof document !== "undefined") {
         document.documentElement.lang = next;

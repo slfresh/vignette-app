@@ -14,7 +14,7 @@ import { PRICING_2026 } from "@/lib/config/pricing2026";
 import { SECTION_TOLL_ESTIMATE_EUR } from "@/lib/config/sectionTollEstimates";
 import { evaluateCountryRequirement, getSectionTollNotices } from "@/lib/config/countryRules";
 import { PRICE_LAST_VERIFIED_AT } from "@/lib/config/pricing2026";
-import { analyzeRouteRequirements, mapCountrySummaries } from "@/lib/routing/analyzeRouteRequirements";
+import { analyzeRouteRequirements, mapCountrySummaries, type AnalysisDraft } from "@/lib/routing/analyzeRouteRequirements";
 import type { OrsDirectionsResponse } from "@/lib/routing/orsTypes";
 import type {
   CountryCode,
@@ -326,6 +326,60 @@ function buildTripEstimate(
             suggestedTopUpCountries.push(cheapest.countryCode);
           }
         }
+
+        // Build a human-readable fuel strategy that factors in tank range
+        let fuelStrategy: string | undefined;
+        if (cheapest) {
+          // Figure out how far the cheapest country is along the route (cumulative km to its START)
+          let cumulativeToStart = 0;
+          let cheapestReachable = true;
+          for (const segment of routeCountriesWithEstimatedDistance) {
+            if (segment.countryCode === cheapest.countryCode) {
+              break;
+            }
+            cumulativeToStart += segment.estimatedDistanceKm;
+          }
+          // Can the driver reach the cheapest country on a full tank?
+          if (cumulativeToStart > estimatedRangePerFullTankKm * 0.9) {
+            cheapestReachable = false;
+          }
+
+          const cheapestLabel = COUNTRY_LABELS[cheapest.countryCode];
+          const cheapestPrice = cheapest.priceEurPerLiter.toFixed(2);
+
+          if (cheapestReachable) {
+            // Driver can reach the cheapest country without refuelling
+            fuelStrategy = `Cheapest fuel is in ${cheapestLabel} (€${cheapestPrice}/L). You can reach it on your starting tank — fill up fully there.`;
+          } else {
+            // Driver needs an interim stop before reaching the cheapest country
+            // Find the cheapest country the driver CAN reach (within ~85% of tank range)
+            const reachableCountries = routeCountriesWithEstimatedDistance
+              .reduce<Array<{ countryCode: CountryCode; cumulativeEndKm: number }>>((acc, seg) => {
+                const prevEnd = acc.length ? acc[acc.length - 1].cumulativeEndKm : 0;
+                acc.push({ countryCode: seg.countryCode, cumulativeEndKm: prevEnd + seg.estimatedDistanceKm });
+                return acc;
+              }, [])
+              .filter((entry) => entry.cumulativeEndKm <= estimatedRangePerFullTankKm * 0.9);
+
+            // Among reachable countries, find the cheapest fuel
+            const reachableCheapest = reachableCountries
+              .map((entry) => {
+                const price = routeCountryFuelPrices.find((fp) => fp.countryCode === entry.countryCode);
+                return price ? { countryCode: entry.countryCode, priceEurPerLiter: price.priceEurPerLiter } : null;
+              })
+              .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+              .sort((a, b) => a.priceEurPerLiter - b.priceEurPerLiter)[0];
+
+            if (reachableCheapest && reachableCheapest.countryCode !== cheapest.countryCode) {
+              const interimLabel = COUNTRY_LABELS[reachableCheapest.countryCode];
+              const interimPrice = reachableCheapest.priceEurPerLiter.toFixed(2);
+              fuelStrategy = `Cheapest fuel is in ${cheapestLabel} (€${cheapestPrice}/L), but it's too far to reach on one tank. Fill up enough in ${interimLabel} (€${interimPrice}/L) to reach the border, then fill fully in ${cheapestLabel}.`;
+            } else {
+              fuelStrategy = `Cheapest fuel is in ${cheapestLabel} (€${cheapestPrice}/L). Consider a partial fill-up before reaching it to ensure you don't run low.`;
+            }
+          }
+        }
+
         return {
           assumedFuelType: getAssumedFuelType(vehicleClass, powertrainType),
           litersNeeded: Number(litersNeeded.toFixed(1)),
@@ -336,6 +390,7 @@ function buildTripEstimate(
           routeCountryFuelPrices,
           estimatedRangePerFullTankKm: Number(estimatedRangePerFullTankKm.toFixed(0)),
           suggestedTopUpCountries,
+          fuelStrategy,
         };
       })()
     : undefined;
@@ -529,6 +584,43 @@ function buildTripReadiness(
   };
 }
 
+function extractBorderCrossings(draft: AnalysisDraft): RouteAnalysisResult["borderCrossings"] {
+  const segments: Array<{ countryCode: CountryCode; start: number; end: number }> = [];
+
+  for (const [code, data] of draft.countries.entries()) {
+    for (const range of data.segmentRanges) {
+      segments.push({ countryCode: code, start: range.start, end: range.end });
+    }
+  }
+
+  segments.sort((a, b) => a.start - b.start);
+
+  const crossings: NonNullable<RouteAnalysisResult["borderCrossings"]> = [];
+
+  for (let i = 0; i < segments.length - 1; i++) {
+    const current = segments[i];
+    const next = segments[i + 1];
+
+    if (current.countryCode !== next.countryCode) {
+      // The crossing point is roughly at the end of the current segment
+      // ORS usually overlaps segments by one point (end of A is start of B)
+      const pointIndex = current.end;
+      const coord = draft.lineString.coordinates[pointIndex];
+
+      if (coord) {
+        crossings.push({
+          countryCodeFrom: current.countryCode,
+          countryCodeTo: next.countryCode,
+          lon: coord[0],
+          lat: coord[1],
+        });
+      }
+    }
+  }
+
+  return crossings;
+}
+
 export function applyCountryRules(
   response: OrsDirectionsResponse,
   request: RouteAnalysisRequest,
@@ -546,6 +638,7 @@ export function applyCountryRules(
   const tripShield = buildTripShieldInsights({ countries, sectionTolls }, request);
   const tripEstimate = buildTripEstimate({ countries, sectionTolls }, request, draft.totalDistanceMeters);
   const tripReadiness = buildTripReadiness({ countries, sectionTolls, tripShield }, request, tripEstimate);
+  const borderCrossings = extractBorderCrossings(draft);
 
   return {
     routeGeoJson: draft.lineString,
@@ -554,6 +647,7 @@ export function applyCountryRules(
     tripEstimate,
     tripShield,
     tripReadiness,
+    borderCrossings,
     compliance: {
       official_source: true,
       informational_only: true,

@@ -1,55 +1,77 @@
-import type { CountryTravelSummary } from "@/types/vignette";
+import { COUNTRY_NAMES } from "@/lib/config/countryNames";
+import type { CountryCode, CountryTravelSummary } from "@/types/vignette";
 import { TOLLS_AVOIDED_NOTICE } from "@/lib/config/countryRules";
 
-const COUNTRY_NAMES: Record<string, string> = {
-  DE: "Germany",
-  AT: "Austria",
-  CZ: "Czech Republic",
-  SK: "Slovakia",
-  HU: "Hungary",
-  SI: "Slovenia",
-  CH: "Switzerland",
-  RO: "Romania",
-  BG: "Bulgaria",
-  HR: "Croatia",
-  RS: "Serbia",
-  DK: "Denmark",
-  SE: "Sweden",
-  NL: "Netherlands",
-  BE: "Belgium",
-  FR: "France",
-  IT: "Italy",
-  BA: "Bosnia and Herzegovina",
-  ME: "Montenegro",
-  XK: "Kosovo",
-  MK: "North Macedonia",
-  AL: "Albania",
-  PL: "Poland",
-  ES: "Spain",
-  PT: "Portugal",
-  GB: "United Kingdom",
-  IE: "Ireland",
-  TR: "Turkey",
-  GR: "Greece",
-};
+/** Traffic light: green=free, yellow=toll, red=vignette */
+function StatusDot({ tone }: { tone: "vignette" | "toll" | "free" }) {
+  const bg =
+    tone === "vignette"
+      ? "bg-red-500"
+      : tone === "toll"
+        ? "bg-amber-500"
+        : "bg-emerald-500";
+  return <span className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${bg}`} aria-hidden />;
+}
 
-function CountryChip({ code, tone, suffix }: { code: string; tone: "vignette" | "toll" | "free"; suffix?: string }) {
+function CountryChip({
+  code,
+  tone,
+  suffix,
+  onClick,
+}: {
+  code: string;
+  tone: "vignette" | "toll" | "free";
+  suffix?: string;
+  onClick?: () => void;
+}) {
   const classes =
     tone === "vignette"
-      ? "border-red-200 bg-red-50 text-red-700"
+      ? "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
       : tone === "toll"
-        ? "border-orange-200 bg-orange-50 text-orange-700"
-        : "border-emerald-200 bg-emerald-50 text-emerald-700";
+        ? "border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100"
+        : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100";
 
+  const content = (
+    <>
+      <StatusDot tone={tone} />
+      <span>
+        {COUNTRY_NAMES[code] ?? code} ({code})
+        {suffix ? ` – ${suffix}` : ""}
+      </span>
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${classes}`}
+      >
+        {content}
+      </button>
+    );
+  }
   return (
-    <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-medium ${classes}`}>
-      {COUNTRY_NAMES[code] ?? code} ({code})
-      {suffix ? ` - ${suffix}` : ""}
+    <span className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium ${classes}`}>
+      {content}
     </span>
   );
 }
 
-export function RouteCountrySummary({ countries }: { countries: CountryTravelSummary[] }) {
+function getTone(country: CountryTravelSummary): "vignette" | "toll" | "free" {
+  if (country.requiresVignette) return "vignette";
+  if (country.requiresSectionToll || country.notices.includes(TOLLS_AVOIDED_NOTICE)) return "toll";
+  return "free";
+}
+
+export function RouteCountrySummary({
+  countries,
+  onCountryClick,
+}: {
+  countries: CountryTravelSummary[];
+  onCountryClick?: (code: CountryCode) => void;
+}) {
   const vignetteCountries = countries.filter((country) => country.requiresVignette);
   const tollCountries = countries.filter(
     (country) => !country.requiresVignette && (country.requiresSectionToll || country.notices.includes(TOLLS_AVOIDED_NOTICE)),
@@ -63,13 +85,37 @@ export function RouteCountrySummary({ countries }: { countries: CountryTravelSum
 
   return (
     <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-      <h3 className="text-base font-semibold text-zinc-900">Route summary by country</h3>
-      <div className="mt-3 grid gap-3">
+      <h3 className="text-lg font-semibold text-zinc-900">Route summary by country</h3>
+
+      {/* Route order with traffic lights – click to jump to card */}
+      <div className="mt-4">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">In route order (click to focus)</p>
+        <div className="flex flex-wrap gap-2">
+          {countries.map((country) => (
+            <CountryChip
+              key={country.countryCode}
+              code={country.countryCode}
+              tone={getTone(country)}
+              suffix={country.notices.includes(TOLLS_AVOIDED_NOTICE) ? "Tolls avoided" : undefined}
+              onClick={onCountryClick ? () => onCountryClick(country.countryCode) : undefined}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 border-t border-zinc-100 pt-4">
         <div>
           <p className="mb-2 text-sm font-medium text-zinc-800">Vignette countries</p>
           <div className="flex flex-wrap gap-2">
             {vignetteCountries.length ? (
-              vignetteCountries.map((country) => <CountryChip key={country.countryCode} code={country.countryCode} tone="vignette" />)
+              vignetteCountries.map((country) => (
+                <CountryChip
+                  key={country.countryCode}
+                  code={country.countryCode}
+                  tone="vignette"
+                  onClick={onCountryClick ? () => onCountryClick(country.countryCode) : undefined}
+                />
+              ))
             ) : (
               <p className="text-sm text-zinc-500">None detected on this route.</p>
             )}
@@ -86,6 +132,7 @@ export function RouteCountrySummary({ countries }: { countries: CountryTravelSum
                   code={country.countryCode}
                   tone="toll"
                   suffix={country.notices.includes(TOLLS_AVOIDED_NOTICE) ? "Tolls avoided" : undefined}
+                  onClick={onCountryClick ? () => onCountryClick(country.countryCode) : undefined}
                 />
               ))
             ) : (
@@ -98,7 +145,14 @@ export function RouteCountrySummary({ countries }: { countries: CountryTravelSum
           <p className="mb-2 text-sm font-medium text-zinc-800">No-fee countries (national level)</p>
           <div className="flex flex-wrap gap-2">
             {freeCountries.length ? (
-              freeCountries.map((country) => <CountryChip key={country.countryCode} code={country.countryCode} tone="free" />)
+              freeCountries.map((country) => (
+                <CountryChip
+                  key={country.countryCode}
+                  code={country.countryCode}
+                  tone="free"
+                  onClick={onCountryClick ? () => onCountryClick(country.countryCode) : undefined}
+                />
+              ))
             ) : (
               <p className="text-sm text-zinc-500">None detected on this route.</p>
             )}

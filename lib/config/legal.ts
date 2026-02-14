@@ -31,3 +31,22 @@ export function getLegalOperatorProfile(): LegalOperatorProfile {
 export function hasPlaceholderLegalProfile(profile: LegalOperatorProfile): boolean {
   return Object.values(profile).some((value) => value.startsWith("REPLACE_WITH_"));
 }
+
+/**
+ * Validates that all LEGAL_* env vars are set in production.
+ * Call this during build or server startup to catch missing config early.
+ */
+export function assertLegalProfileConfigured(): void {
+  if (process.env.NODE_ENV !== "production") return;
+
+  const profile = getLegalOperatorProfile();
+  if (hasPlaceholderLegalProfile(profile)) {
+    const missing = Object.entries(profile)
+      .filter(([, value]) => value.startsWith("REPLACE_WITH_"))
+      .map(([key]) => key);
+    throw new Error(
+      `[FATAL] Legal profile has placeholder values in production. ` +
+      `Set the LEGAL_* environment variables. Missing: ${missing.join(", ")}`,
+    );
+  }
+}

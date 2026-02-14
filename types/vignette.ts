@@ -129,6 +129,8 @@ export interface TripEstimate {
     }>;
     estimatedRangePerFullTankKm: number;
     suggestedTopUpCountries: CountryCode[];
+    /** Human-readable fuel strategy that accounts for tank range vs cheapest country */
+    fuelStrategy?: string;
   };
   electric?: {
     kwhNeeded: number;
@@ -187,6 +189,12 @@ export interface RouteAnalysisResult {
   tripEstimate?: TripEstimate;
   tripShield?: TripShieldInsights;
   tripReadiness?: TripReadiness;
+  borderCrossings?: Array<{
+    countryCodeFrom: CountryCode;
+    countryCodeTo: CountryCode;
+    lat: number;
+    lon: number;
+  }>;
   appliedPreferences?: {
     avoidTolls: boolean;
     channelCrossingPreference: "auto" | "ferry" | "tunnel";

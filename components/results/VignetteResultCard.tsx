@@ -4,40 +4,9 @@ import { useI18n } from "@/components/i18n/I18nProvider";
 import { convertCurrencyToEur } from "@/lib/config/exchangeRates";
 import { OFFICIAL_LINKS } from "@/lib/config/officialLinks";
 import { PRICING_2026 } from "@/lib/config/pricing2026";
+import { COUNTRY_NAMES } from "@/lib/config/countryNames";
 import type { CountryCode, CountryTravelSummary, PowertrainType, VehicleClass, VignetteProduct } from "@/types/vignette";
-import { ExternalLink } from "lucide-react";
-
-const COUNTRY_NAMES: Record<string, string> = {
-  DE: "Germany",
-  AT: "Austria",
-  CZ: "Czech Republic",
-  SK: "Slovakia",
-  HU: "Hungary",
-  SI: "Slovenia",
-  CH: "Switzerland",
-  RO: "Romania",
-  BG: "Bulgaria",
-  HR: "Croatia",
-  RS: "Serbia",
-  DK: "Denmark",
-  SE: "Sweden",
-  NL: "Netherlands",
-  BE: "Belgium",
-  FR: "France",
-  IT: "Italy",
-  BA: "Bosnia and Herzegovina",
-  ME: "Montenegro",
-  XK: "Kosovo",
-  MK: "North Macedonia",
-  AL: "Albania",
-  PL: "Poland",
-  ES: "Spain",
-  PT: "Portugal",
-  GB: "United Kingdom",
-  IE: "Ireland",
-  TR: "Turkey",
-  GR: "Greece",
-};
+import { ChevronDown, ExternalLink } from "lucide-react";
 
 const FLAGS: Record<string, string> = {
   DE: "DE",
@@ -139,15 +108,19 @@ export function VignetteResultCard({
   vehicleClass = "PASSENGER_CAR_M1",
   powertrainType = "PETROL",
   highlighted = false,
+  expanded = true,
   onHover,
   onToggleLock,
+  onExpandToggle,
 }: {
   country: CountryTravelSummary;
   vehicleClass?: VehicleClass;
   powertrainType?: PowertrainType;
   highlighted?: boolean;
+  expanded?: boolean;
   onHover?: (countryCode: CountryTravelSummary["countryCode"] | null) => void;
   onToggleLock?: (countryCode: CountryCode) => void;
+  onExpandToggle?: (countryCode: CountryCode) => void;
 }) {
   const { t } = useI18n();
   const pricing = PRICING_2026[country.countryCode];
@@ -162,31 +135,48 @@ export function VignetteResultCard({
 
   return (
     <article
-      className={`rounded-2xl border bg-white p-4 shadow-sm transition-colors ${
+      className={`rounded-2xl border bg-white shadow-sm transition-colors ${
         highlighted ? "border-orange-300 ring-2 ring-orange-100" : "border-zinc-200"
-      } cursor-pointer`}
+      } overflow-hidden`}
       onMouseEnter={() => onHover?.(country.countryCode)}
       onMouseLeave={() => onHover?.(null)}
-      onClick={() => onToggleLock?.(country.countryCode)}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onToggleLock?.(country.countryCode);
-        }
-      }}
     >
-      <header className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-zinc-900">
-          {COUNTRY_NAMES[country.countryCode]} <span className="text-sm text-zinc-500">({FLAGS[country.countryCode]})</span>
-        </h3>
-        <span className={`rounded-full px-2 py-1 text-xs font-medium ${country.requiresVignette ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"}`}>
-          {country.requiresVignette ? t("card.badge.vignetteNeeded") : t("card.badge.noVignette")}
-        </span>
+      <header
+        className="flex cursor-pointer items-center justify-between gap-2 p-4"
+        onClick={() => onToggleLock?.(country.countryCode)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onToggleLock?.(country.countryCode);
+          }
+        }}
+      >
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <h3 className="text-lg font-semibold text-zinc-900">
+            {COUNTRY_NAMES[country.countryCode]} <span className="text-sm text-zinc-500">({FLAGS[country.countryCode]})</span>
+          </h3>
+          <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-medium ${country.requiresVignette ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"}`}>
+            {country.requiresVignette ? t("card.badge.vignetteNeeded") : t("card.badge.noVignette")}
+          </span>
+        </div>
+        <button
+          type="button"
+          className="shrink-0 rounded p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700"
+          aria-expanded={expanded}
+          onClick={(e) => {
+            e.stopPropagation();
+            onExpandToggle?.(country.countryCode);
+          }}
+        >
+          <ChevronDown className={`h-5 w-5 transition-transform ${expanded ? "" : "-rotate-90"}`} />
+        </button>
       </header>
 
-      <p className="mt-2 text-sm text-zinc-600">
+      {expanded ? (
+        <div className="border-t border-zinc-100 p-4 pt-3">
+      <p className="text-sm text-zinc-600">
         {t("card.highwayDistance")}: {(country.highwayDistanceMeters / 1000).toFixed(1)} km
       </p>
 
@@ -234,6 +224,8 @@ export function VignetteResultCard({
         {t("card.buyOfficial")}
         <ExternalLink className="h-4 w-4" />
       </a>
+        </div>
+      ) : null}
     </article>
   );
 }

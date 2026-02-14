@@ -1,0 +1,43 @@
+name: Check Official Links
+
+on:
+  schedule:
+    - cron: '0 6 * * 1' # Every Monday at 06:00 UTC
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  check-links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check official links
+        run: |
+          node -e "
+          const links = require('./lib/config/officialLinks.ts');
+          // This is a simplified check - in practice use ts-node or compile first
+          console.log('Link checker placeholder - implement with ts-node');
+          "
+
+      - name: Check links with curl
+        run: |
+          set +e
+          FAILED=0
+          # Extract URLs from officialLinks.ts
+          grep -oP 'https?://[^\x22\x27 ]+' lib/config/officialLinks.ts | sort -u | while read url; do
+            STATUS=$(curl -o /dev/null -s -w "%{http_code}" -L --max-time 15 "$url" 2>/dev/null)
+            if [ "$STATUS" -ge 400 ] || [ "$STATUS" -eq 000 ]; then
+              echo "BROKEN: $url (HTTP $STATUS)"
+              FAILED=1
+            else
+              echo "OK: $url (HTTP $STATUS)"
+            fi
+          done
+          if [ "$FAILED" -eq 1 ]; then
+            echo "::warning::Some official links returned errors. Review the output above."
+          fi

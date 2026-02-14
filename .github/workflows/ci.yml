@@ -29,3 +29,8 @@ jobs:
 
       - name: Unit tests
         run: npm run test
+
+      - name: Build
+        run: npm run build
+        env:
+          ORS_API_KEY: test-placeholder
