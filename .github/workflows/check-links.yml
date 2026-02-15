@@ -16,22 +16,18 @@ jobs:
         with:
           node-version: 22
 
-      - name: Check official links
-        run: |
-          node -e "
-          const links = require('./lib/config/officialLinks.ts');
-          // This is a simplified check - in practice use ts-node or compile first
-          console.log('Link checker placeholder - implement with ts-node');
-          "
+      - name: Install dependencies
+        run: npm ci
 
       - name: Check links with curl
+        shell: bash
         run: |
           set +e
           FAILED=0
-          # Extract URLs from officialLinks.ts
-          grep -oP 'https?://[^\x22\x27 ]+' lib/config/officialLinks.ts | sort -u | while read url; do
+          # Extract URLs from officialLinks.ts (handles both .ts source)
+          grep -oP 'https?://[^"'"'"' ]+' lib/config/officialLinks.ts | sort -u | while read -r url; do
             STATUS=$(curl -o /dev/null -s -w "%{http_code}" -L --max-time 15 "$url" 2>/dev/null)
-            if [ "$STATUS" -ge 400 ] || [ "$STATUS" -eq 000 ]; then
+            if [ "$STATUS" -ge 400 ] || [ "$STATUS" = "000" ]; then
               echo "BROKEN: $url (HTTP $STATUS)"
               FAILED=1
             else

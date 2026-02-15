@@ -144,7 +144,39 @@ export type TranslationKey =
   | "consent.title"
   | "consent.description"
   | "consent.accept"
-  | "consent.reject";
+  | "consent.reject"
+  | "budget.totalLabel"
+  | "budget.vignettes"
+  | "budget.sectionTolls"
+  | "budget.fuelEstimate"
+  | "budget.chargingEstimate"
+  | "budget.totalDistance"
+  | "budget.tryAgain"
+  | "summary.title"
+  | "summary.routeOrder"
+  | "summary.tollsAvoided"
+  | "summary.vignetteCountries"
+  | "summary.tollCountries"
+  | "summary.noFeeCountries"
+  | "summary.noneDetected"
+  | "map.routeMap"
+  | "map.minimize"
+  | "map.cameraFeedHint"
+  | "map.useAsStart"
+  | "map.geoDenied"
+  | "map.geoLoading"
+  | "mapPicker.setStart"
+  | "mapPicker.setStartActive"
+  | "mapPicker.setDest"
+  | "mapPicker.setDestActive"
+  | "cost.fuelStrategy"
+  | "cost.cheapestFuel"
+  | "cost.planStopsTank"
+  | "cost.chargingNote"
+  | "vehicle.car"
+  | "vehicle.motorcycle"
+  | "vehicle.camper"
+  | "offline.message";
 
 export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>>> = {
   en: {
@@ -284,6 +316,38 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "consent.description": "We only load optional affiliate or analytics tracking after consent, as required by TDDDG.",
     "consent.accept": "Accept",
     "consent.reject": "Reject",
+    "budget.totalLabel": "Estimated total budget",
+    "budget.vignettes": "Vignettes",
+    "budget.sectionTolls": "Section tolls",
+    "budget.fuelEstimate": "Fuel estimate",
+    "budget.chargingEstimate": "Charging estimate",
+    "budget.totalDistance": "Total distance",
+    "budget.tryAgain": "Try again",
+    "summary.title": "Route summary by country",
+    "summary.routeOrder": "In route order (click to focus)",
+    "summary.tollsAvoided": "Tolls avoided",
+    "summary.vignetteCountries": "Vignette countries",
+    "summary.tollCountries": "Toll countries",
+    "summary.noFeeCountries": "No-fee countries (national level)",
+    "summary.noneDetected": "None detected on this route.",
+    "map.routeMap": "Route map",
+    "map.minimize": "Minimize",
+    "map.cameraFeedHint": "Opens HAK live feed in new tab",
+    "map.useAsStart": "Use my location as start",
+    "map.geoDenied": "Location access was denied",
+    "map.geoLoading": "Locating you…",
+    "mapPicker.setStart": "Set Start on map",
+    "mapPicker.setStartActive": "Click map for Start (A)",
+    "mapPicker.setDest": "Set Destination on map",
+    "mapPicker.setDestActive": "Click map for Destination (B)",
+    "cost.fuelStrategy": "Fuel strategy",
+    "cost.cheapestFuel": "Cheapest fuel found",
+    "cost.planStopsTank": "Plan stops accordingly based on your tank range",
+    "cost.chargingNote": "Real charging cost can vary by network, charger type, weather, and subscription.",
+    "vehicle.car": "Car",
+    "vehicle.motorcycle": "Motorcycle",
+    "vehicle.camper": "Camper van / RV",
+    "offline.message": "You are offline. Route calculations require an internet connection.",
   },
   de: {
     "header.unofficial": "Inoffizielles Informationsportal",
@@ -422,6 +486,38 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "consent.description": "Optionale Affiliate- oder Analysetools werden nur nach Einwilligung geladen, wie vom TDDDG gefordert.",
     "consent.accept": "Akzeptieren",
     "consent.reject": "Ablehnen",
+    "budget.totalLabel": "Geschaetztes Gesamtbudget",
+    "budget.vignettes": "Vignetten",
+    "budget.sectionTolls": "Streckenmaut",
+    "budget.fuelEstimate": "Kraftstoff-Schaetzung",
+    "budget.chargingEstimate": "Lade-Schaetzung",
+    "budget.totalDistance": "Gesamtstrecke",
+    "budget.tryAgain": "Erneut versuchen",
+    "summary.title": "Routenueberblick nach Land",
+    "summary.routeOrder": "In Routenreihenfolge (klicken zum Fokussieren)",
+    "summary.tollsAvoided": "Maut vermieden",
+    "summary.vignetteCountries": "Vignettenlaender",
+    "summary.tollCountries": "Mautlaender",
+    "summary.noFeeCountries": "Gebuehrenfreie Laender (national)",
+    "summary.noneDetected": "Keine auf dieser Route erkannt.",
+    "map.routeMap": "Routenkarte",
+    "map.minimize": "Minimieren",
+    "map.cameraFeedHint": "Oeffnet HAK-Live-Feed in neuem Tab",
+    "map.useAsStart": "Meinen Standort als Start verwenden",
+    "map.geoDenied": "Standortzugriff verweigert",
+    "map.geoLoading": "Standort wird ermittelt…",
+    "mapPicker.setStart": "Start auf Karte setzen",
+    "mapPicker.setStartActive": "Karte fuer Start (A) klicken",
+    "mapPicker.setDest": "Ziel auf Karte setzen",
+    "mapPicker.setDestActive": "Karte fuer Ziel (B) klicken",
+    "cost.fuelStrategy": "Tankstrategie",
+    "cost.cheapestFuel": "Guenstigster Kraftstoff gefunden",
+    "cost.planStopsTank": "Stopps je nach Tankreichweite planen",
+    "cost.chargingNote": "Reale Ladekosten variieren je nach Netzwerk, Ladegeraet, Wetter und Abonnement.",
+    "vehicle.car": "Auto",
+    "vehicle.motorcycle": "Motorrad",
+    "vehicle.camper": "Camper / Wohnmobil",
+    "offline.message": "Sie sind offline. Routenberechnungen erfordern eine Internetverbindung.",
   },
   tr: {
     "header.unofficial": "Resmi olmayan bilgi portali",
@@ -560,6 +656,38 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "consent.description": "Istege bagli ortaklik veya analiz takibi yalnizca onay sonrasinda yuklenir (TDDDG geregi).",
     "consent.accept": "Kabul et",
     "consent.reject": "Reddet",
+    "budget.totalLabel": "Tahmini toplam butce",
+    "budget.vignettes": "Vinyetler",
+    "budget.sectionTolls": "Kesit ucretleri",
+    "budget.fuelEstimate": "Yakit tahmini",
+    "budget.chargingEstimate": "Sarj tahmini",
+    "budget.totalDistance": "Toplam mesafe",
+    "budget.tryAgain": "Tekrar dene",
+    "summary.title": "Ulkeye gore rota ozeti",
+    "summary.routeOrder": "Rota sirasinda (odaklanmak icin tikla)",
+    "summary.tollsAvoided": "Ucretler engellendi",
+    "summary.vignetteCountries": "Vinyet ulkeleri",
+    "summary.tollCountries": "Ucretli yol ulkeleri",
+    "summary.noFeeCountries": "Ucretsiz ulkeler (ulusal duzeyde)",
+    "summary.noneDetected": "Bu rotada tespit edilmedi.",
+    "map.routeMap": "Rota haritasi",
+    "map.minimize": "Kucult",
+    "map.cameraFeedHint": "HAK canli yayini yeni sekmede acar",
+    "map.useAsStart": "Konumumu baslangic olarak kullan",
+    "map.geoDenied": "Konum erisimi reddedildi",
+    "map.geoLoading": "Konumunuz belirleniyor…",
+    "mapPicker.setStart": "Haritada baslangic sec",
+    "mapPicker.setStartActive": "Baslangic icin haritaya tikla (A)",
+    "mapPicker.setDest": "Haritada varis sec",
+    "mapPicker.setDestActive": "Varis icin haritaya tikla (B)",
+    "cost.fuelStrategy": "Yakit stratejisi",
+    "cost.cheapestFuel": "En ucuz yakit bulundu",
+    "cost.planStopsTank": "Depo menzilinize gore durak planlayin",
+    "cost.chargingNote": "Gercek sarj maliyeti ag, sarj tipi, hava ve abonelik durumuna gore degisir.",
+    "vehicle.car": "Otomobil",
+    "vehicle.motorcycle": "Motosiklet",
+    "vehicle.camper": "Karavan / RV",
+    "offline.message": "Cevrimdisi durumdasiniz. Rota hesaplamalari internet baglantisi gerektirir.",
   },
   pl: {
     "header.unofficial": "Niezalezny portal informacyjny",
@@ -698,6 +826,38 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "consent.description": "Opcjonalne sledzenie afiliacyjne lub analityczne jest ladowane dopiero po wyrazeniu zgody (TDDDG).",
     "consent.accept": "Akceptuj",
     "consent.reject": "Odrzuc",
+    "budget.totalLabel": "Szacunkowy budzet calkowity",
+    "budget.vignettes": "Winiety",
+    "budget.sectionTolls": "Oplaty odcinkowe",
+    "budget.fuelEstimate": "Szacunek paliwa",
+    "budget.chargingEstimate": "Szacunek ladowania",
+    "budget.totalDistance": "Calkowity dystans",
+    "budget.tryAgain": "Sprobuj ponownie",
+    "summary.title": "Podsumowanie trasy wg kraju",
+    "summary.routeOrder": "Kolejnosc trasy (kliknij aby ustawic)",
+    "summary.tollsAvoided": "Oplaty pominiete",
+    "summary.vignetteCountries": "Kraje z winieta",
+    "summary.tollCountries": "Kraje z oplatami",
+    "summary.noFeeCountries": "Kraje bez oplat (poziom krajowy)",
+    "summary.noneDetected": "Nie wykryto na tej trasie.",
+    "map.routeMap": "Mapa trasy",
+    "map.minimize": "Zminimalizuj",
+    "map.cameraFeedHint": "Otwiera transmisje HAK w nowej karcie",
+    "map.useAsStart": "Uzyj mojej lokalizacji jako startu",
+    "map.geoDenied": "Odmowiono dostepu do lokalizacji",
+    "map.geoLoading": "Okreslanie lokalizacji…",
+    "mapPicker.setStart": "Ustaw start na mapie",
+    "mapPicker.setStartActive": "Kliknij mape dla startu (A)",
+    "mapPicker.setDest": "Ustaw cel na mapie",
+    "mapPicker.setDestActive": "Kliknij mape dla celu (B)",
+    "cost.fuelStrategy": "Strategia paliwowa",
+    "cost.cheapestFuel": "Znaleziono najtansze paliwo",
+    "cost.planStopsTank": "Zaplanuj postoje wedlug zasiegu baku",
+    "cost.chargingNote": "Rzeczywisty koszt ladowania moze sie roznic w zaleznosci od sieci, typu ladowarki, pogody i subskrypcji.",
+    "vehicle.car": "Samochod",
+    "vehicle.motorcycle": "Motocykl",
+    "vehicle.camper": "Kamper / RV",
+    "offline.message": "Jestes offline. Obliczanie trasy wymaga polaczenia z internetem.",
   },
   ro: {
     "header.unofficial": "Portal informativ neoficial",
@@ -836,5 +996,37 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "consent.description": "Urmarirea optionala de afiliere sau analiza se incarca doar dupa consimtamant (conform TDDDG).",
     "consent.accept": "Accept",
     "consent.reject": "Refuz",
+    "budget.totalLabel": "Buget total estimat",
+    "budget.vignettes": "Vignete",
+    "budget.sectionTolls": "Taxe pe sectiune",
+    "budget.fuelEstimate": "Estimare combustibil",
+    "budget.chargingEstimate": "Estimare incarcare",
+    "budget.totalDistance": "Distanta totala",
+    "budget.tryAgain": "Incearca din nou",
+    "summary.title": "Rezumat ruta pe tari",
+    "summary.routeOrder": "In ordinea rutei (click pentru a focaliza)",
+    "summary.tollsAvoided": "Taxe evitate",
+    "summary.vignetteCountries": "Tari cu vigneta",
+    "summary.tollCountries": "Tari cu taxe",
+    "summary.noFeeCountries": "Tari fara taxe (nivel national)",
+    "summary.noneDetected": "Niciuna detectata pe aceasta ruta.",
+    "map.routeMap": "Harta rutei",
+    "map.minimize": "Minimizeaza",
+    "map.cameraFeedHint": "Deschide fluxul live HAK in tab nou",
+    "map.useAsStart": "Foloseste locatia mea ca punct de pornire",
+    "map.geoDenied": "Accesul la locatie a fost refuzat",
+    "map.geoLoading": "Se determina locatia…",
+    "mapPicker.setStart": "Seteaza pornirea pe harta",
+    "mapPicker.setStartActive": "Click pe harta pentru pornire (A)",
+    "mapPicker.setDest": "Seteaza destinatia pe harta",
+    "mapPicker.setDestActive": "Click pe harta pentru destinatie (B)",
+    "cost.fuelStrategy": "Strategie combustibil",
+    "cost.cheapestFuel": "Cel mai ieftin combustibil gasit",
+    "cost.planStopsTank": "Planifica opririle in functie de autonomia rezervorului",
+    "cost.chargingNote": "Costul real de incarcare poate varia in functie de retea, tip incarcator, vreme si abonament.",
+    "vehicle.car": "Masina",
+    "vehicle.motorcycle": "Motocicleta",
+    "vehicle.camper": "Autorulota / RV",
+    "offline.message": "Sunteti offline. Calculul rutei necesita conexiune la internet.",
   },
 };

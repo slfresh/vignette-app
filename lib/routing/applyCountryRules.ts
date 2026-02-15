@@ -254,6 +254,14 @@ function buildTripEstimate(
           },
           priceEur: Number(converted.toFixed(2)),
         });
+      } else {
+        // No matching product found – add a zero-cost entry so the UI still shows this country
+        vignetteBreakdown.push({
+          countryCode: country.countryCode,
+          productLabel: "Pricing data unavailable – check official source",
+          originalPrice: { amount: 0, currency: "EUR" },
+          priceEur: 0,
+        });
       }
     }
 

@@ -186,8 +186,46 @@ html.theme-dark code {
   background: #fff;
   color: #18181b;
 }
+html.theme-dark .leaflet-popup-content-wrapper {
+  background: #1e293b;
+  color: #e5e7eb;
+}
+html.theme-dark .leaflet-popup-tip {
+  background: #1e293b;
+}
 .leaflet-popup-content {
   margin: 12px 16px;
+}
+
+/* ─── Map overlay buttons (fullscreen, camera toggle) ─── */
+.map-overlay-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 2px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text-primary);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  cursor: pointer;
+  z-index: 1001;
+}
+.map-overlay-btn:hover {
+  opacity: 0.85;
+}
+.map-overlay-btn:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+.map-overlay-btn--active {
+  border-color: #0ea5e9;
+  background: #e0f2fe;
+}
+html.theme-dark .map-overlay-btn--active {
+  background: #164e63;
+  border-color: #22d3ee;
 }
 
 /* ─── Fullscreen map overlay ─── */
@@ -207,4 +245,66 @@ html.theme-dark .map-fullscreen-header button {
 html.theme-dark .map-fullscreen-header button:hover {
   background-color: #475569 !important;
   border-color: #64748b !important;
+}
+
+/* ─── Screen-reader only utility ─── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ─── Camera icon (dark-mode aware) ─── */
+.camera-icon-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9999px;
+  background: #e0f2fe;
+  border: 2px solid #0ea5e9;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+html.theme-dark .camera-icon-circle {
+  background: #164e63;
+  border-color: #22d3ee;
+}
+
+/* ─── Mobile safe area for fixed bottom elements ─── */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ─── Geolocation blue dot with pulse animation ─── */
+.geo-dot-wrapper {
+  /* Override leaflet default icon styling */
+  background: none !important;
+  border: none !important;
+}
+.geo-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #3b82f6;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
+  animation: geo-pulse 2s ease-out infinite;
+}
+@keyframes geo-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
+  }
+  70% {
+    box-shadow: 0 0 0 18px rgba(59, 130, 246, 0), 0 2px 6px rgba(0, 0, 0, 0.3);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0), 0 2px 6px rgba(0, 0, 0, 0.3);
+  }
 }

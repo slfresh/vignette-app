@@ -66,7 +66,10 @@ export const routeAnalysisRequestSchema = z.object({
     .max(180, "Destination is too long (max 180 characters)."),
   startPoint: routePointSchema.optional(),
   endPoint: routePointSchema.optional(),
-  dateISO: z.string().optional(),
+  dateISO: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format.")
+    .optional(),
   vehicleClass: z.enum(VEHICLE_CLASSES).optional(),
   powertrainType: z.enum(POWERTRAIN_TYPES).optional(),
   grossWeightKg: z
@@ -84,7 +87,10 @@ export const routeAnalysisRequestSchema = z.object({
   seats: z.number().int().min(1).max(100).optional(),
   avoidTolls: z.boolean().optional(),
   channelCrossingPreference: z.enum(CHANNEL_CROSSING_PREFERENCES).optional(),
-});
+}).refine(
+  (data) => data.start.toLowerCase() !== data.end.toLowerCase(),
+  { message: "Start and destination must be different.", path: ["end"] },
+);
 
 /**
  * Validation schema for geocode suggestion query parameters.

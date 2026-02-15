@@ -6,12 +6,13 @@ import { geocodeSuggestQuerySchema, formatZodErrors } from "@/lib/validation/sch
 
 const ORS_GEOCODE_URL = "https://api.openrouteservice.org/geocode/search";
 const PHOTON_GEOCODE_URL = "https://photon.komoot.io/api/";
-const EUROPE_BOUNDS = {
-  minLat: 34,
-  maxLat: 72,
-  minLon: -12,
-  maxLon: 45,
-};
+const GEOCODE_TIMEOUT_MS = 8_000;
+/** Create an AbortSignal that fires after the given number of milliseconds. */
+function timeoutSignal(ms: number): { signal: AbortSignal; clear: () => void } {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), ms);
+  return { signal: controller.signal, clear: () => clearTimeout(id) };
+}
 
 const CITY_DISAMBIGUATION_RULES: Record<string, RegExp> = {
   osijek: /\b(croatia|hrvatska)\b/i,
@@ -40,10 +41,6 @@ interface OrsFeature {
     gid?: string;
     locality?: string;
   };
-}
-
-function inEurope(lat: number, lon: number): boolean {
-  return lat >= EUROPE_BOUNDS.minLat && lat <= EUROPE_BOUNDS.maxLat && lon >= EUROPE_BOUNDS.minLon && lon <= EUROPE_BOUNDS.maxLon;
 }
 
 function buildLabel(feature: PhotonFeature): string {
@@ -160,10 +157,12 @@ export async function GET(request: Request) {
   if (orsApiKey) {
     try {
       const orsUrl = `${ORS_GEOCODE_URL}?text=${encodeURIComponent(query)}&size=8`;
+      const { signal: orsSignal, clear: orsClear } = timeoutSignal(GEOCODE_TIMEOUT_MS);
       const orsResponse = await fetch(orsUrl, {
         cache: "no-store",
         headers: { Authorization: orsApiKey },
-      });
+        signal: orsSignal,
+      }).finally(orsClear);
       if (orsResponse.ok) {
         const orsPayload = (await orsResponse.json()) as { features?: OrsFeature[] };
         for (const feature of orsPayload.features ?? []) {
@@ -173,7 +172,7 @@ export async function GET(request: Request) {
           }
           const lon = Number(coordinates[0]);
           const lat = Number(coordinates[1]);
-          if (!Number.isFinite(lat) || !Number.isFinite(lon) || !inEurope(lat, lon)) {
+          if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
             continue;
           }
           const label = feature.properties?.label ?? feature.properties?.name ?? "Unknown location";
@@ -200,7 +199,8 @@ export async function GET(request: Request) {
   if (collected.length < 8) {
     try {
       const photonUrl = `${PHOTON_GEOCODE_URL}?q=${encodeURIComponent(query)}&limit=8`;
-      const photonResponse = await fetch(photonUrl, { cache: "no-store" });
+      const { signal: photonSignal, clear: photonClear } = timeoutSignal(GEOCODE_TIMEOUT_MS);
+      const photonResponse = await fetch(photonUrl, { cache: "no-store", signal: photonSignal }).finally(photonClear);
       if (photonResponse.ok) {
         const photonPayload = (await photonResponse.json()) as { features?: PhotonFeature[] };
         for (const feature of photonPayload.features ?? []) {
@@ -210,7 +210,7 @@ export async function GET(request: Request) {
           }
           const lon = Number(coordinates[0]);
           const lat = Number(coordinates[1]);
-          if (!Number.isFinite(lat) || !Number.isFinite(lon) || !inEurope(lat, lon)) {
+          if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
             continue;
           }
           const label = buildLabel(feature);

@@ -2,8 +2,7 @@
 
 import { ConsentBanner } from "@/components/legal/ConsentBanner";
 import { useI18n } from "@/components/i18n/I18nProvider";
-import { RouteForm } from "@/components/route/RouteForm";
-import { getCameraPinsForCrossings } from "@/lib/border/cameraPins";
+import { RouteForm, type RouteFormHandle } from "@/components/route/RouteForm";
 import { useSearchParams, useRouter } from "next/navigation";
 import { AppliedPreferencesBanner } from "@/components/results/AppliedPreferencesBanner";
 import { ComplianceBadge } from "@/components/results/ComplianceBadge";
@@ -16,12 +15,13 @@ import { TripCostSummary } from "@/components/results/TripCostSummary";
 import { TripReadinessPanel } from "@/components/results/TripReadinessPanel";
 import { TripShieldPanel } from "@/components/results/TripShieldPanel";
 import { VignetteResultCard } from "@/components/results/VignetteResultCard";
-import type { CountryCode, EmissionClass, PowertrainType, RouteAnalysisResult, VehicleClass } from "@/types/vignette";
+import type { CountryCode, EmissionClass, PowertrainType, RouteAnalysisResult, RoutePoint, VehicleClass } from "@/types/vignette";
 import { AlertTriangle, RefreshCw, Route } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useGeolocation } from "@/hooks/useGeolocation";
 
-const MapClient = dynamic(() => import("@/components/map/MapClient").then((mod) => mod.MapClient), {
+const UnifiedMap = dynamic(() => import("@/components/map/UnifiedMap").then((mod) => mod.UnifiedMap), {
   ssr: false,
 });
 
@@ -81,6 +81,16 @@ function HomeContent() {
   const lastPayloadRef = useRef<Record<string, unknown> | null>(null);
   const countryCardRefs = useRef<Record<string, HTMLElement | null>>({});
   const submitAbortRef = useRef<AbortController | null>(null);
+  const formRef = useRef<RouteFormHandle | null>(null);
+  const [formValues, setFormValues] = useState<{
+    start: string;
+    end: string;
+    startPoint?: RoutePoint;
+    endPoint?: RoutePoint;
+  }>({ start: "", end: "" });
+
+  /* Geolocation – auto-ask on load */
+  const geo = useGeolocation();
 
   const submitRoute = useCallback(async (payload: {
     start: string;
@@ -144,7 +154,7 @@ function HomeContent() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [router, searchParams]);
 
   const estimatedSavingsEuro = useMemo(() => {
     if (!result) {
@@ -162,12 +172,8 @@ function HomeContent() {
     return selected?.routeSegments ?? [];
   }, [result, activeCountryCode]);
 
-  /** Only show camera toggle when we actually have camera feeds for this route's crossings */
-  const hasBorderCameraData = useMemo(() => {
-    if (!result?.borderCrossings?.length) return false;
-    const pins = getCameraPinsForCrossings(result.borderCrossings);
-    return pins.length > 0;
-  }, [result?.borderCrossings]);
+  /** Always show camera toggle – users can browse all Croatian border cameras regardless of route */
+  const hasBorderCameraData = true;
 
   // Auto-submit when user lands with a shared URL (?from=X&to=Y)
   const fromUrl = safeDecodeParam(searchParams.get("from"));
@@ -215,34 +221,78 @@ function HomeContent() {
     };
   }, []);
 
+  /* ── Map select handlers (fill form from map clicks) ── */
+  const handleMapSelectStart = useCallback(
+    (label: string, point: RoutePoint) => {
+      formRef.current?.setStartFromMap(label, point);
+    },
+    [],
+  );
+  const handleMapSelectDest = useCallback(
+    (label: string, point: RoutePoint) => {
+      formRef.current?.setEndFromMap(label, point);
+    },
+    [],
+  );
+
   return (
     <main id="main-content" className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6" tabIndex={-1}>
+      {/* ── Header ── */}
       <header ref={headerRef} className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-lg">
         <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 px-6 py-4">
-          <p className="text-xs font-semibold tracking-wider text-blue-200 uppercase">{t("header.unofficial")}</p>
+          <p className="text-xs font-semibold tracking-wider text-blue-100 uppercase">{t("header.unofficial")}</p>
           <h1 className="mt-1.5 inline-flex items-center gap-2.5 text-2xl font-bold text-white">
             <Route className="h-7 w-7" strokeWidth={2.5} />
             {BRAND.name}
           </h1>
-          <p className="mt-1 text-sm font-medium text-blue-100">{t("header.subtitle")}</p>
+          <p className="mt-1 text-sm font-medium text-white/90">{t("header.subtitle")}</p>
         </div>
         <div className="px-6 py-3">
           <p className="text-sm text-zinc-600">{t("header.tagline")}</p>
         </div>
       </header>
 
-      <RouteForm
-        initialStart={fromUrl}
-        initialEnd={toUrl}
-        isSubmitting={loading}
-        onSubmit={async (payload) => {
-          await submitRoute(payload);
-        }}
-      />
+      {/* ── Map + Form grid ──
+          Mobile: Map on top (order-first), Form below
+          Desktop (lg): Form left, Map right (sticky) */}
+      <div className="grid gap-6 lg:grid-cols-[1fr_420px] lg:items-start">
+        <RouteForm
+          ref={formRef}
+          initialStart={fromUrl}
+          initialEnd={toUrl}
+          isSubmitting={loading}
+          onValuesChange={setFormValues}
+          onSubmit={async (payload) => {
+            await submitRoute(payload);
+          }}
+        />
 
-      {/* Error display with actionable advice */}
+        {/* Unified Map – always visible, transitions between input & route mode */}
+        <div className="order-first lg:order-none lg:sticky" style={{ top: `${stickyTopPx}px` }}>
+          <UnifiedMap
+            /* Input mode props */
+            startPoint={formValues.startPoint}
+            endPoint={formValues.endPoint}
+            onSelectStart={handleMapSelectStart}
+            onSelectDestination={handleMapSelectDest}
+            /* Route mode props – only passed when a route has been calculated */
+            routeCoordinates={result?.routeGeoJson.coordinates}
+            highlightedCountryCode={activeCountryCode}
+            highlightedSegments={highlightedSegments}
+            borderCrossings={result?.borderCrossings}
+            showBorderCameras={showBorderCameras}
+            onToggleBorderCameras={setShowBorderCameras}
+            hasBorderCameraData={hasBorderCameraData}
+            /* Geolocation */
+            geoPosition={geo.position}
+            geoLoading={geo.loading}
+          />
+        </div>
+      </div>
+
+      {/* ── Error display with actionable advice ── */}
       {error ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 shadow-sm" role="alert">
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 shadow-sm" role="alert">
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
             <div className="min-w-0">
@@ -272,9 +322,10 @@ function HomeContent() {
         </div>
       ) : null}
 
-      {/* Loading skeleton shown while route analysis is in progress */}
+      {/* ── Loading skeleton ── */}
       {loading && !result ? <ResultsSkeleton /> : null}
 
+      {/* ── Results section ── */}
       {result ? (
         <section className="grid gap-6" aria-live="polite">
           <AppliedPreferencesBanner result={result} />
@@ -327,54 +378,42 @@ function HomeContent() {
             onShowBorderCamerasChange={setShowBorderCameras}
             hasBorderCameraData={hasBorderCameraData}
           />
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] xl:items-start">
-            {/* On mobile: map/summary first (order-1), main content second (order-2). On xl: default source order. */}
-            <div className="order-2 grid gap-6 xl:order-none">
-              <TripReadinessPanel result={result} />
-              <TripCostSummary result={result} />
-              <SectionTollAlert notices={result.sectionTolls} />
-              <div className="grid gap-4 md:grid-cols-2">
-                {result.countries.map((country, index) => {
-                  const isFirst = index === 0;
-                  const expanded = isFirst || activeCountryCode === country.countryCode || expandedCountryCodes.has(country.countryCode);
-                  return (
-                    <div
-                      key={country.countryCode}
-                      ref={(el) => { countryCardRefs.current[country.countryCode] = el; }}
-                    >
-                      <VignetteResultCard
-                        country={country}
-                        vehicleClass={result.appliedPreferences?.vehicleClass ?? "PASSENGER_CAR_M1"}
-                        powertrainType={result.appliedPreferences?.powertrainType ?? "PETROL"}
-                        highlighted={activeCountryCode === country.countryCode}
-                        expanded={expanded}
-                        onHover={(code) => setHoveredCountryCode(code)}
-                        onToggleLock={(code) => {
-                          setLockedCountryCode((previous) => (previous === code ? null : code));
-                        }}
-                        onExpandToggle={handleExpandToggle}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-              <MonetizationPanel estimatedSavingsEuro={estimatedSavingsEuro} />
-              <ComplianceBadge compliance={result.compliance} />
-            </div>
 
-            <aside className="order-1 grid gap-4 xl:order-none xl:sticky xl:self-start" style={{ top: `${stickyTopPx}px` }}>
-              <RouteCountrySummary countries={result.countries} onCountryClick={handleCountrySummaryClick} />
-              <MapClient
-                coordinates={result.routeGeoJson.coordinates}
-                highlightedCountryCode={activeCountryCode}
-                highlightedSegments={highlightedSegments}
-                borderCrossings={result.borderCrossings}
-                showBorderCameras={showBorderCameras}
-                onToggleBorderCameras={setShowBorderCameras}
-                hasBorderCameraData={hasBorderCameraData}
-              />
-            </aside>
+          {/* Route summary + country cards */}
+          <RouteCountrySummary countries={result.countries} onCountryClick={handleCountrySummaryClick} />
+
+          <TripReadinessPanel result={result} />
+          <TripCostSummary result={result} />
+          <SectionTollAlert notices={result.sectionTolls} />
+
+          <div className="grid gap-4 md:grid-cols-2">
+            {result.countries.map((country, index) => {
+              const isFirst = index === 0;
+              const expanded = isFirst || activeCountryCode === country.countryCode || expandedCountryCodes.has(country.countryCode);
+              return (
+                <div
+                  key={country.countryCode}
+                  ref={(el) => { countryCardRefs.current[country.countryCode] = el; }}
+                >
+                  <VignetteResultCard
+                    country={country}
+                    vehicleClass={result.appliedPreferences?.vehicleClass ?? "PASSENGER_CAR_M1"}
+                    powertrainType={result.appliedPreferences?.powertrainType ?? "PETROL"}
+                    highlighted={activeCountryCode === country.countryCode}
+                    expanded={expanded}
+                    onHover={(code) => setHoveredCountryCode(code)}
+                    onToggleLock={(code) => {
+                      setLockedCountryCode((previous) => (previous === code ? null : code));
+                    }}
+                    onExpandToggle={handleExpandToggle}
+                  />
+                </div>
+              );
+            })}
           </div>
+
+          <MonetizationPanel estimatedSavingsEuro={estimatedSavingsEuro} />
+          <ComplianceBadge compliance={result.compliance} />
         </section>
       ) : null}
 

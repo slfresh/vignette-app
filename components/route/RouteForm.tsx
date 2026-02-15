@@ -1,7 +1,7 @@
 "use client";
 
 import { Bike, Car, ChevronDown, Info, Loader2, Search, Send, Settings, Truck } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import type { TranslationKey } from "@/lib/i18n/translations";
 import type { EmissionClass, PowertrainType, RoutePoint, VehicleClass } from "@/types/vignette";
@@ -56,9 +56,19 @@ interface RouteFormProps {
   initialEnd?: string;
   /** Disable submit while parent is loading (e.g. auto-submit from URL) */
   isSubmitting?: boolean;
+  /** Called when start/end or points change – used to sync with map picker markers */
+  onValuesChange?: (values: { start: string; end: string; startPoint?: RoutePoint; endPoint?: RoutePoint }) => void;
 }
 
-export function RouteForm({ onSubmit, initialStart = "", initialEnd = "", isSubmitting = false }: RouteFormProps) {
+export type RouteFormHandle = {
+  setStartFromMap: (label: string, point: RoutePoint) => void;
+  setEndFromMap: (label: string, point: RoutePoint) => void;
+};
+
+export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function RouteForm(
+  { onSubmit, initialStart = "", initialEnd = "", isSubmitting = false, onValuesChange }: RouteFormProps,
+  ref,
+) {
   const { t } = useI18n();
   const [start, setStart] = useState(initialStart);
   const [end, setEnd] = useState(initialEnd);
@@ -136,6 +146,23 @@ export function RouteForm({ onSubmit, initialStart = "", initialEnd = "", isSubm
       // localStorage full or disabled
     }
   }, [vehicleType, powertrainType]);
+
+  useImperativeHandle(ref, () => ({
+    setStartFromMap: (label: string, point: RoutePoint) => {
+      setStart(label);
+      setStartPoint(point);
+      setStartSuggestions([]);
+    },
+    setEndFromMap: (label: string, point: RoutePoint) => {
+      setEnd(label);
+      setEndPoint(point);
+      setEndSuggestions([]);
+    },
+  }));
+
+  useEffect(() => {
+    onValuesChange?.({ start, end, startPoint, endPoint });
+  }, [start, end, startPoint, endPoint, onValuesChange]);
 
   useEffect(() => {
     if (startPoint) {
@@ -337,7 +364,7 @@ export function RouteForm({ onSubmit, initialStart = "", initialEnd = "", isSubm
             />
           </div>
           {startSuggestions.length ? (
-            <div id="start-listbox" role="listbox" className="absolute left-0 right-0 top-[100%] z-20 mt-1 max-h-52 overflow-auto rounded-lg border border-zinc-200 bg-white shadow-xl">
+            <div id="start-listbox" role="listbox" className="absolute left-0 right-0 top-[100%] z-20 mt-1 max-h-52 overflow-auto rounded-lg border border-zinc-200 bg-white shadow-lg">
               {startSuggestions.map((suggestion, index) => (
                 <button
                   id={`start-option-${index}`}
@@ -421,7 +448,7 @@ export function RouteForm({ onSubmit, initialStart = "", initialEnd = "", isSubm
             />
           </div>
           {endSuggestions.length ? (
-            <div id="end-listbox" role="listbox" className="absolute left-0 right-0 top-[100%] z-20 mt-1 max-h-52 overflow-auto rounded-lg border border-zinc-200 bg-white shadow-xl">
+            <div id="end-listbox" role="listbox" className="absolute left-0 right-0 top-[100%] z-20 mt-1 max-h-52 overflow-auto rounded-lg border border-zinc-200 bg-white shadow-lg">
               {endSuggestions.map((suggestion, index) => (
                 <button
                   id={`end-option-${index}`}
@@ -656,4 +683,4 @@ export function RouteForm({ onSubmit, initialStart = "", initialEnd = "", isSubm
       </div>
     </form>
   );
-}
+});

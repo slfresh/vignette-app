@@ -1,3 +1,4 @@
+import { useI18n } from "@/components/i18n/I18nProvider";
 import { COUNTRY_NAMES } from "@/lib/config/countryNames";
 import type { CountryCode, CountryTravelSummary } from "@/types/vignette";
 import { TOLLS_AVOIDED_NOTICE } from "@/lib/config/countryRules";
@@ -72,6 +73,7 @@ export function RouteCountrySummary({
   countries: CountryTravelSummary[];
   onCountryClick?: (code: CountryCode) => void;
 }) {
+  const { t } = useI18n();
   const vignetteCountries = countries.filter((country) => country.requiresVignette);
   const tollCountries = countries.filter(
     (country) => !country.requiresVignette && (country.requiresSectionToll || country.notices.includes(TOLLS_AVOIDED_NOTICE)),
@@ -85,18 +87,18 @@ export function RouteCountrySummary({
 
   return (
     <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-      <h3 className="text-lg font-semibold text-zinc-900">Route summary by country</h3>
+      <h3 className="text-lg font-semibold text-zinc-900">{t("summary.title")}</h3>
 
       {/* Route order with traffic lights – click to jump to card */}
       <div className="mt-4">
-        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">In route order (click to focus)</p>
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">{t("summary.routeOrder")}</p>
         <div className="flex flex-wrap gap-2">
           {countries.map((country) => (
             <CountryChip
               key={country.countryCode}
               code={country.countryCode}
               tone={getTone(country)}
-              suffix={country.notices.includes(TOLLS_AVOIDED_NOTICE) ? "Tolls avoided" : undefined}
+              suffix={country.notices.includes(TOLLS_AVOIDED_NOTICE) ? t("summary.tollsAvoided") : undefined}
               onClick={onCountryClick ? () => onCountryClick(country.countryCode) : undefined}
             />
           ))}
@@ -105,7 +107,7 @@ export function RouteCountrySummary({
 
       <div className="mt-4 grid gap-3 border-t border-zinc-100 pt-4">
         <div>
-          <p className="mb-2 text-sm font-medium text-zinc-800">Vignette countries</p>
+          <p className="mb-2 text-sm font-medium text-zinc-800">{t("summary.vignetteCountries")}</p>
           <div className="flex flex-wrap gap-2">
             {vignetteCountries.length ? (
               vignetteCountries.map((country) => (
@@ -117,13 +119,13 @@ export function RouteCountrySummary({
                 />
               ))
             ) : (
-              <p className="text-sm text-zinc-500">None detected on this route.</p>
+              <p className="text-sm text-zinc-500">{t("summary.noneDetected")}</p>
             )}
           </div>
         </div>
 
         <div>
-          <p className="mb-2 text-sm font-medium text-zinc-800">Toll countries</p>
+          <p className="mb-2 text-sm font-medium text-zinc-800">{t("summary.tollCountries")}</p>
           <div className="flex flex-wrap gap-2">
             {tollCountries.length ? (
               tollCountries.map((country) => (
@@ -131,18 +133,18 @@ export function RouteCountrySummary({
                   key={country.countryCode}
                   code={country.countryCode}
                   tone="toll"
-                  suffix={country.notices.includes(TOLLS_AVOIDED_NOTICE) ? "Tolls avoided" : undefined}
+                  suffix={country.notices.includes(TOLLS_AVOIDED_NOTICE) ? t("summary.tollsAvoided") : undefined}
                   onClick={onCountryClick ? () => onCountryClick(country.countryCode) : undefined}
                 />
               ))
             ) : (
-              <p className="text-sm text-zinc-500">None detected on this route.</p>
+              <p className="text-sm text-zinc-500">{t("summary.noneDetected")}</p>
             )}
           </div>
         </div>
 
         <div>
-          <p className="mb-2 text-sm font-medium text-zinc-800">No-fee countries (national level)</p>
+          <p className="mb-2 text-sm font-medium text-zinc-800">{t("summary.noFeeCountries")}</p>
           <div className="flex flex-wrap gap-2">
             {freeCountries.length ? (
               freeCountries.map((country) => (
@@ -154,7 +156,7 @@ export function RouteCountrySummary({
                 />
               ))
             ) : (
-              <p className="text-sm text-zinc-500">None detected on this route.</p>
+              <p className="text-sm text-zinc-500">{t("summary.noneDetected")}</p>
             )}
           </div>
         </div>

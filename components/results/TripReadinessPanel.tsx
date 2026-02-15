@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import { OFFICIAL_LINKS, SECTION_TOLL_LINKS } from "@/lib/config/officialLinks";
 import { getCameraPinsForCrossings } from "@/lib/border/cameraPins";
-import type { CountryCode, RouteAnalysisResult } from "@/types/vignette";
+import type { RouteAnalysisResult } from "@/types/vignette";
 import { AlertTriangle, CheckCircle2, Clock3, ExternalLink, ShieldCheck } from "lucide-react";
 
 function getUrbanZoneLink(countryCode: string): string | null {

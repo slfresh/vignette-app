@@ -8,6 +8,8 @@ type RateLimitBucket = {
 
 const RATE_LIMIT_STORE = new Map<string, RateLimitBucket>();
 const REDIS_LIMITERS = new Map<string, Ratelimit>();
+/** Cap for REDIS_LIMITERS to prevent unbounded memory growth */
+const MAX_REDIS_LIMITER_ENTRIES = 50;
 
 /**
  * Extract client IP from request headers.
@@ -92,6 +94,11 @@ function getRedisLimiter(scope: string, maxRequests: number, windowMs: number): 
     limiter: Ratelimit.fixedWindow(maxRequests, `${seconds} s`),
     prefix: `ratelimit:${scope}`,
   });
+  // Evict oldest entries if the cache is at capacity
+  if (REDIS_LIMITERS.size >= MAX_REDIS_LIMITER_ENTRIES) {
+    const firstKey = REDIS_LIMITERS.keys().next().value;
+    if (firstKey !== undefined) REDIS_LIMITERS.delete(firstKey);
+  }
   REDIS_LIMITERS.set(cacheKey, limiter);
   return limiter;
 }

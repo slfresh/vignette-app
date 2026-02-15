@@ -82,6 +82,8 @@ export function analyzeRouteRequirements(
     };
     existing.segmentRanges.push({ start, end });
 
+    // ORS ranges: [startPoint, endPoint, value]. Edge i = (point[i], point[i+1]).
+    // Last edge in range starts at idx = end - 1, so idx < end is correct.
     for (let idx = start; idx < end; idx += 1) {
       const current = coordinates[idx];
       const next = coordinates[idx + 1];

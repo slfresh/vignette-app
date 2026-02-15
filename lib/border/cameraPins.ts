@@ -16,7 +16,7 @@ export type CameraFeedWithDistance = CameraFeed & {
 };
 
 /**
- * Border crossings with live camera feeds (uzivokamere.com, HAK).
+ * Border crossings with live camera feeds (HAK – Croatian borders).
  * Used to show camera pins on the map when the user enables "Show border cameras".
  *
  * When a route crosses a border at (lat, lon), we show the NEAREST camera(s) to that point –
@@ -46,186 +46,88 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
 }
 
 const BORDER_CAMERAS: BorderCameraPin[] = [
-  // Hungary ↔ Serbia
-  {
-    crossingCode: "HU-RS",
-    cameras: [{ label: "Horgoš / Röszke", url: "https://uzivokamere.com/granicni-prelaz-horgos-kamera-madjarska-srbija-izlaz/", lat: 46.16, lon: 19.99 }],
-    countries: ["HU", "RS"],
-  },
-  // Serbia ↔ Bulgaria
-  {
-    crossingCode: "RS-BG",
-    cameras: [{ label: "Gradina / Kalotina", url: "https://uzivokamere.com/granicni-prelaz-gradina-srbija-bugarska/", lat: 43.11, lon: 22.92 }],
-    countries: ["RS", "BG"],
-  },
-  // Bulgaria ↔ Turkey
-  {
-    crossingCode: "BG-TR",
-    cameras: [{ label: "Kapikule / Kapitan Andreevo", url: "https://uzivokamere.com/granicni-prelaz-andreevo-bugarska-turska/", lat: 41.69, lon: 26.36 }],
-    countries: ["BG", "TR"],
-  },
-  // Bulgaria ↔ Greece
-  {
-    crossingCode: "BG-GR",
-    cameras: [{ label: "Kulata / Promachonas", url: "https://uzivokamere.com/granicni-prelaz-kulata-bugarska-grcka/", lat: 41.38, lon: 23.35 }],
-    countries: ["BG", "GR"],
-  },
-  // Turkey ↔ Greece
-  {
-    crossingCode: "GR-TR",
-    cameras: [{ label: "Pazarkule / Kastanies", url: "https://uzivokamere.com/granicni-prelaz-pazarkule-turska-grcka/", lat: 41.14, lon: 26.30 }],
-    countries: ["GR", "TR"],
-  },
-  // Croatia ↔ Slovenia – HAK + uzivokamere
+  // Croatia ↔ Slovenia – HAK
+  // Coordinates sourced from OpenStreetMap / Mapcarta border checkpoint nodes
   {
     crossingCode: "HR-SI",
     cameras: [
-      { label: "Bregana / Obrezje", url: "https://uzivokamere.com/granicni-prelaz-bregana-kamera-hrvatska-slovenija/", lat: 45.84, lon: 15.70 },
-      { label: "Bregana (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=3", lat: 45.84, lon: 15.70 },
-      { label: "Macelj (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=16", lat: 46.24, lon: 15.88 },
-      { label: "Pasjak (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=21", lat: 45.55, lon: 14.27 },
-      { label: "Rupa (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=28", lat: 45.47, lon: 14.29 },
+      { label: "Bregana", url: "https://m.hak.hr/kamera.asp?g=2&k=3", lat: 45.8422, lon: 15.6993 },
+      { label: "Macelj", url: "https://m.hak.hr/kamera.asp?g=2&k=16", lat: 46.2660, lon: 15.8693 },
+      { label: "Pasjak", url: "https://m.hak.hr/kamera.asp?g=2&k=21", lat: 45.4833, lon: 14.2167 },
+      { label: "Rupa", url: "https://m.hak.hr/kamera.asp?g=2&k=28", lat: 45.4780, lon: 14.2860 },
     ],
     countries: ["HR", "SI"],
   },
-  // Croatia ↔ Serbia – proximity-matched, HAK + uzivokamere
+  // Croatia ↔ Serbia – HAK
   {
     crossingCode: "HR-RS",
     cameras: [
-      { label: "Batrovci / Bajakovo", url: "https://uzivokamere.com/granicni-prelaz-batrovci-kamere-srbija-hrvatska/", lat: 45.05, lon: 19.10 },
-      { label: "Bajakovo (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=1", lat: 45.05, lon: 19.10 },
-      { label: "Erdut", url: "https://uzivokamere.com/granicni-prelaz-erdut-kamera-hrvatska-srbija/", lat: 45.53, lon: 18.72 },
-      { label: "Erdut (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=197", lat: 45.53, lon: 18.72 },
-      { label: "Ilok", url: "https://uzivokamere.com/granicni-prelaz-ilok-kamera-hrvatska-srbija/", lat: 45.22, lon: 19.38 },
-      { label: "Ilok (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=200", lat: 45.22, lon: 19.38 },
-      { label: "Tovarnik / Šid", url: "https://uzivokamere.com/granicni-prelaz-tovarnik-hrvatska-srbija/", lat: 45.16, lon: 19.15 },
-      { label: "Tovarnik (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=196", lat: 45.16, lon: 19.15 },
-      { label: "Šid", url: "https://uzivokamere.com/granicni-prelaz-sid-srbija-hrvatska-2/", lat: 45.12, lon: 19.22 },
+      { label: "Bajakovo", url: "https://m.hak.hr/kamera.asp?g=2&k=1", lat: 45.0484, lon: 19.0983 },
+      { label: "Erdut", url: "https://m.hak.hr/kamera.asp?g=2&k=197", lat: 45.5145, lon: 19.0783 },
+      { label: "Ilok", url: "https://m.hak.hr/kamera.asp?g=2&k=200", lat: 45.2249, lon: 19.4010 },
+      { label: "Tovarnik", url: "https://m.hak.hr/kamera.asp?g=2&k=196", lat: 45.1548, lon: 19.1753 },
     ],
     countries: ["HR", "RS"],
   },
-  // Croatia ↔ Bosnia – proximity-matched, HAK + uzivokamere
+  // Croatia ↔ Bosnia – HAK
   {
     crossingCode: "HR-BA",
     cameras: [
-      // ── Southern crossings (Dalmatia / Herzegovina) ──
-      { label: "Nova Sela / Bijača (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=137", lat: 43.12, lon: 17.56 },
-      { label: "Bijača / Nova Sela", url: "https://uzivokamere.com/granicni-prijelaz-ivanica-bih-hrvatska/", lat: 43.12, lon: 17.56 },
-      { label: "Metković (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=136", lat: 43.05, lon: 17.65 },
-      { label: "Doljani / Metković", url: "https://uzivokamere.com/granicni-prijelaz-doljani-bih-hrvatska/", lat: 43.05, lon: 17.65 },
-      { label: "Klek / Neum 1 (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=138", lat: 42.95, lon: 17.56 },
-      { label: "Zaton Doli / Neum 2 (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=139", lat: 42.88, lon: 17.55 },
-      { label: "Neum", url: "https://uzivokamere.com/neum-bosna-i-hercegovina/", lat: 42.92, lon: 17.62 },
-      { label: "BIH Ivanica (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=182", lat: 42.95, lon: 17.52 },
-      { label: "Ivanica (Dubrovnik)", url: "https://uzivokamere.com/granicni-prijelaz-ivanica-bih-hrvatska/", lat: 42.95, lon: 17.52 },
-      { label: "Brgat (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=208", lat: 42.65, lon: 18.10 },
-      { label: "BIH Crveni Grm (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=181", lat: 43.22, lon: 17.44 },
-      { label: "Crveni Grm", url: "https://uzivokamere.com/granicni-prijelaz-crveni-grm-bih-hrvatska/", lat: 43.22, lon: 17.44 },
-      { label: "Aržano (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=193", lat: 43.58, lon: 16.95 },
-      { label: "Vinjani Gornji (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=282", lat: 43.21, lon: 17.37 },
-      { label: "Vinjani Donji (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=39", lat: 43.15, lon: 17.37 },
-      { label: "Vinjani Donji / Gorica", url: "https://uzivokamere.com/vinjani-donji-hrvatska-bih/", lat: 43.15, lon: 17.37 },
-      // ── Central crossings (Slavonia / Posavina) ──
-      { label: "Slavonski Brod (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=140", lat: 45.16, lon: 18.01 },
-      { label: "Slavonski Brod", url: "https://uzivokamere.com/granicni-prelaz-slavonski-brod-hrvatska-bih/", lat: 45.16, lon: 18.01 },
-      { label: "BIH Bosanski Brod (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=184", lat: 45.14, lon: 17.98 },
-      { label: "Brod", url: "https://uzivokamere.com/granicni-prelaz-brod-bih-hrvatska/", lat: 45.14, lon: 17.98 },
-      { label: "Svilaj (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=211", lat: 45.06, lon: 17.95 },
-      { label: "BIH Orašje (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=183", lat: 45.03, lon: 18.69 },
-      { label: "Orašje", url: "https://uzivokamere.com/granicni-prelaz-orasje-bih-hrvatska/", lat: 45.03, lon: 18.69 },
-      { label: "Gunja (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=206", lat: 44.88, lon: 18.85 },
-      { label: "Gunja", url: "https://uzivokamere.com/granicni-prelaz-gunja-hrvatska-bih/", lat: 44.88, lon: 18.85 },
-      { label: "Brčko", url: "https://uzivokamere.com/granicni-prelaz-brcko-bih-hrvatska/", lat: 44.88, lon: 18.82 },
-      // ── Northern / Western crossings ──
-      { label: "Stara Gradiška (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=32", lat: 45.14, lon: 17.25 },
-      { label: "Stara Gradiška", url: "https://uzivokamere.com/granicni-prelaz-stara-gradiska-hrvatska-bih/", lat: 45.14, lon: 17.25 },
-      { label: "BIH Bosanska Gradiška (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=185", lat: 45.14, lon: 17.24 },
-      { label: "Gradiška", url: "https://uzivokamere.com/granicni-prelaz-gradiska-bih-hrvatska/", lat: 45.14, lon: 17.24 },
-      { label: "Donja Gradina", url: "https://uzivokamere.com/granicni-prelaz-donja-gradina-bih-hrvatska/", lat: 45.25, lon: 16.88 },
-      { label: "Kamensko (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=192", lat: 45.18, lon: 16.85 },
-      { label: "Kamensko", url: "https://uzivokamere.com/granicni-prijelaz-izacic-bih-hrvatska/", lat: 45.18, lon: 16.85 },
-      { label: "BIH Izačić (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=179", lat: 45.18, lon: 15.85 },
-      { label: "BIH Prisika (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=180", lat: 45.48, lon: 15.35 },
-      { label: "Prisika", url: "https://uzivokamere.com/granicni-prijelaz-prisika-bih-hrvatska/", lat: 45.48, lon: 15.35 },
-      { label: "Maljevac (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=177", lat: 45.18, lon: 15.80 },
-      { label: "Velika Kladuša", url: "https://uzivokamere.com/granicni-prijelaz-velika-kladusa-bih-hrvatska/", lat: 45.18, lon: 15.80 },
-      { label: "Kozarska Dubica", url: "https://uzivokamere.com/granicni-prelaz-kozarska-dubica-bih-hrvatska-2/", lat: 45.18, lon: 16.85 },
-      { label: "Kostajnica", url: "https://uzivokamere.com/granicni-prelaz-kostajnica-bih-hrvatska/", lat: 45.22, lon: 16.53 },
-      { label: "Novi Grad / Dvor", url: "https://uzivokamere.com/granicni-prelaz-novi-grad-dvor-bih-hrvatska/", lat: 45.04, lon: 16.38 },
+      { label: "Nova Sela / Bijača", url: "https://m.hak.hr/kamera.asp?g=2&k=137", lat: 43.1232, lon: 17.5749 },
+      { label: "Metković", url: "https://m.hak.hr/kamera.asp?g=2&k=136", lat: 43.0505, lon: 17.6613 },
+      { label: "Klek / Neum 1", url: "https://m.hak.hr/kamera.asp?g=2&k=138", lat: 42.9400, lon: 17.5792 },
+      { label: "Zaton Doli / Neum 2", url: "https://m.hak.hr/kamera.asp?g=2&k=139", lat: 42.8883, lon: 17.6526 },
+      { label: "BIH Ivanica", url: "https://m.hak.hr/kamera.asp?g=2&k=182", lat: 42.6629, lon: 18.1628 },
+      { label: "Brgat", url: "https://m.hak.hr/kamera.asp?g=2&k=208", lat: 42.6522, lon: 18.1591 },
+      { label: "BIH Crveni Grm", url: "https://m.hak.hr/kamera.asp?g=2&k=181", lat: 43.1740, lon: 17.4749 },
+      { label: "Aržano", url: "https://m.hak.hr/kamera.asp?g=2&k=193", lat: 43.5806, lon: 17.0036 },
+      { label: "Vinjani Gornji", url: "https://m.hak.hr/kamera.asp?g=2&k=282", lat: 43.4598, lon: 17.2845 },
+      { label: "Vinjani Donji", url: "https://m.hak.hr/kamera.asp?g=2&k=39", lat: 43.4222, lon: 17.2743 },
+      { label: "Slavonski Brod", url: "https://m.hak.hr/kamera.asp?g=2&k=140", lat: 45.1568, lon: 18.0022 },
+      { label: "BIH Bosanski Brod", url: "https://m.hak.hr/kamera.asp?g=2&k=184", lat: 45.1462, lon: 18.0059 },
+      { label: "Svilaj", url: "https://m.hak.hr/kamera.asp?g=2&k=211", lat: 45.1147, lon: 18.3218 },
+      { label: "BIH Orašje", url: "https://m.hak.hr/kamera.asp?g=2&k=183", lat: 45.0362, lon: 18.6937 },
+      { label: "Gunja", url: "https://m.hak.hr/kamera.asp?g=2&k=206", lat: 44.8867, lon: 18.8152 },
+      { label: "Stara Gradiška", url: "https://m.hak.hr/kamera.asp?g=2&k=32", lat: 45.1511, lon: 17.2463 },
+      { label: "BIH Bosanska Gradiška", url: "https://m.hak.hr/kamera.asp?g=2&k=185", lat: 45.1471, lon: 17.2544 },
+      { label: "Kamensko", url: "https://m.hak.hr/kamera.asp?g=2&k=192", lat: 43.6119, lon: 16.9733 },
+      { label: "BIH Izačić", url: "https://m.hak.hr/kamera.asp?g=2&k=179", lat: 44.8785, lon: 15.7927 },
+      { label: "BIH Prisika", url: "https://m.hak.hr/kamera.asp?g=2&k=180", lat: 44.2368, lon: 17.4160 },
+      { label: "Maljevac", url: "https://m.hak.hr/kamera.asp?g=2&k=177", lat: 45.1977, lon: 15.7926 },
     ],
     countries: ["HR", "BA"],
   },
-  // Croatia ↔ Montenegro – HAK + uzivokamere
+  // Croatia ↔ Montenegro – HAK
   {
     crossingCode: "HR-ME",
     cameras: [
-      { label: "Debeli Brijeg / Karasovići", url: "https://uzivokamere.com/granicni-prelaz-debeli-brijeg-karasovici-crna-gora-hrvatska/", lat: 42.56, lon: 18.52 },
-      { label: "Karasovići (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=141", lat: 42.56, lon: 18.52 },
-      { label: "Vitaljina (HAK)", url: "https://m.hak.hr/kamera.asp?g=2&k=209", lat: 42.50, lon: 18.52 },
+      { label: "Karasovići", url: "https://m.hak.hr/kamera.asp?g=2&k=141", lat: 42.4907, lon: 18.4343 },
+      { label: "Vitaljina", url: "https://m.hak.hr/kamera.asp?g=2&k=209", lat: 42.4232, lon: 18.5137 },
     ],
     countries: ["HR", "ME"],
-  },
-  // Slovenia ↔ Italy
-  {
-    crossingCode: "IT-SI",
-    cameras: [{ label: "Fernetiči / Vrtojba", url: "https://uzivokamere.com/granicni-prelaz-fernetici-slovenija-italija/", lat: 45.87, lon: 13.63 }],
-    countries: ["IT", "SI"],
-  },
-  // Austria ↔ Hungary
-  {
-    crossingCode: "AT-HU",
-    cameras: [{ label: "Nickelsdorf / Hegyeshalom", url: "https://uzivokamere.com/granicni-prelaz-nickelsdorf-austrija-madjarska/", lat: 47.85, lon: 17.14 }],
-    countries: ["AT", "HU"],
-  },
-  // Serbia ↔ Montenegro
-  {
-    crossingCode: "RS-ME",
-    cameras: [{ label: "Špiljani / Dračenovac", url: "https://uzivokamere.com/granicni-prelaz-spiljani-srbija-crna-gora-izlaz/", lat: 43.11, lon: 19.26 }],
-    countries: ["RS", "ME"],
-  },
-  // Serbia ↔ North Macedonia
-  {
-    crossingCode: "RS-MK",
-    cameras: [{ label: "Preševo / Tabanovce", url: "https://uzivokamere.com/granicni-prelaz-presevo-srbija-s-makedonija/", lat: 42.30, lon: 21.71 }],
-    countries: ["RS", "MK"],
-  },
-  // North Macedonia ↔ Greece
-  {
-    crossingCode: "GR-MK",
-    cameras: [{ label: "Bogorodica / Evzoni", url: "https://uzivokamere.com/bogorodica-severna-makedonija-grcka-evzoni/", lat: 41.12, lon: 22.50 }],
-    countries: ["GR", "MK"],
-  },
-  // Bosnia ↔ Serbia – proximity-matched
-  {
-    crossingCode: "BA-RS",
-    cameras: [
-      { label: "Bosanska Rača / Sremska Rača", url: "https://uzivokamere.com/granicni-prelaz-bosanska-raca-bih-srbija-izlaz/", lat: 44.98, lon: 19.38 },
-      { label: "Pavlovića most", url: "https://uzivokamere.com/granicni-prelaz-pavlovica-most-bih-srbija/", lat: 44.52, lon: 19.20 },
-      { label: "Mali Zvornik", url: "https://uzivokamere.com/granicni-prelaz-mali-zvornik-kamera-srbija-bih/", lat: 44.37, lon: 19.12 },
-      { label: "Kotroman / Vardište", url: "https://uzivokamere.com/granicni-prijelaz-kotroman-vardiste-srbija-bih/", lat: 44.15, lon: 19.05 },
-      { label: "Karakaj", url: "https://uzivokamere.com/granicni-prelaz-karakaj-zvornik-bih-srbija/", lat: 44.38, lon: 19.10 },
-      { label: "Šepak", url: "https://uzivokamere.com/granicni-prelaz-sepak-bih-srbija/", lat: 44.55, lon: 19.25 },
-      { label: "Rača", url: "https://uzivokamere.com/granicni-prelaz-raca-bih-srbija/", lat: 45.00, lon: 19.35 },
-    ],
-    countries: ["BA", "RS"],
-  },
-  // Bosnia ↔ Montenegro
-  {
-    crossingCode: "BA-ME",
-    cameras: [{ label: "Hum / Scepan Polje", url: "https://uzivokamere.com/granicni-prijelaz-hum-bih-crna-gora/", lat: 42.72, lon: 18.54 }],
-    countries: ["BA", "ME"],
-  },
-  // Serbia ↔ Romania
-  {
-    crossingCode: "RO-RS",
-    cameras: [{ label: "Vatin", url: "https://uzivokamere.com/granicni-prelaz-vatin-srbija-rumunija/", lat: 44.96, lon: 21.32 }],
-    countries: ["RO", "RS"],
   },
 ];
 
 function crossingKey(a: CountryCode, b: CountryCode): string {
   const codes = [a, b].sort();
   return `${codes[0]}-${codes[1]}`;
+}
+
+/** Flat list of all border cameras – for showing every camera on the map regardless of route. */
+export type CameraFeedWithBorder = CameraFeed & {
+  countryCodeFrom: CountryCode;
+  countryCodeTo: CountryCode;
+};
+
+export function getAllCameraFeeds(): CameraFeedWithBorder[] {
+  const feeds: CameraFeedWithBorder[] = [];
+  for (const pin of BORDER_CAMERAS) {
+    const [from, to] = pin.countries;
+    for (const cam of pin.cameras) {
+      feeds.push({ ...cam, countryCodeFrom: from, countryCodeTo: to });
+    }
+  }
+  return feeds;
 }
 
 /**

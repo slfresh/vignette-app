@@ -1,6 +1,7 @@
 "use client";
 
 import { useI18n } from "@/components/i18n/I18nProvider";
+import type { TranslationKey } from "@/lib/i18n/translations";
 import { convertCurrencyToEur } from "@/lib/config/exchangeRates";
 import { OFFICIAL_LINKS } from "@/lib/config/officialLinks";
 import { PRICING_2026 } from "@/lib/config/pricing2026";
@@ -93,14 +94,10 @@ function getCamperCaution(countryCode: string, vehicleClass: VehicleClass): stri
   return null;
 }
 
-function formatVehicleLabel(vehicleClass: VehicleClass): string {
-  if (vehicleClass === "MOTORCYCLE") {
-    return "Motorcycle";
-  }
-  if (vehicleClass === "VAN_OR_MPV" || vehicleClass === "COMMERCIAL_N1") {
-    return "Camper van / RV";
-  }
-  return "Car";
+function formatVehicleLabel(vehicleClass: VehicleClass, t: (key: TranslationKey) => string): string {
+  if (vehicleClass === "MOTORCYCLE") return t("vehicle.motorcycle");
+  if (vehicleClass === "VAN_OR_MPV" || vehicleClass === "COMMERCIAL_N1") return t("vehicle.camper");
+  return t("vehicle.car");
 }
 
 export function VignetteResultCard({
@@ -140,35 +137,29 @@ export function VignetteResultCard({
       } overflow-hidden`}
       onMouseEnter={() => onHover?.(country.countryCode)}
       onMouseLeave={() => onHover?.(null)}
+      onFocus={() => onHover?.(country.countryCode)}
+      onBlur={() => onHover?.(null)}
     >
-      <header
-        className="flex cursor-pointer items-center justify-between gap-2 p-4"
-        onClick={() => onToggleLock?.(country.countryCode)}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            onToggleLock?.(country.countryCode);
-          }
-        }}
-      >
-        <div className="flex min-w-0 flex-1 items-center gap-2">
+      <header className="flex items-center justify-between gap-2 p-4">
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+          onClick={() => onToggleLock?.(country.countryCode)}
+          aria-label={`Select ${COUNTRY_NAMES[country.countryCode]}`}
+        >
           <h3 className="text-lg font-semibold text-zinc-900">
             {COUNTRY_NAMES[country.countryCode]} <span className="text-sm text-zinc-500">({FLAGS[country.countryCode]})</span>
           </h3>
           <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-medium ${country.requiresVignette ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"}`}>
             {country.requiresVignette ? t("card.badge.vignetteNeeded") : t("card.badge.noVignette")}
           </span>
-        </div>
+        </button>
         <button
           type="button"
-          className="shrink-0 rounded p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700"
+          className="shrink-0 rounded p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
           aria-expanded={expanded}
-          onClick={(e) => {
-            e.stopPropagation();
-            onExpandToggle?.(country.countryCode);
-          }}
+          aria-label={`${expanded ? "Collapse" : "Expand"} ${COUNTRY_NAMES[country.countryCode]} details`}
+          onClick={() => onExpandToggle?.(country.countryCode)}
         >
           <ChevronDown className={`h-5 w-5 transition-transform ${expanded ? "" : "-rotate-90"}`} />
         </button>
@@ -184,7 +175,7 @@ export function VignetteResultCard({
 
       {visibleProducts.length ? (
         <>
-          <p className="mt-3 text-xs font-medium text-zinc-600">{t("card.pricesFor")}: {formatVehicleLabel(vehicleClass)}</p>
+          <p className="mt-3 text-xs font-medium text-zinc-600">{t("card.pricesFor")}: {formatVehicleLabel(vehicleClass, t)}</p>
           <table className="mt-2 w-full text-sm">
           <thead>
             <tr className="text-left text-zinc-500">

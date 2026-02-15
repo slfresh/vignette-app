@@ -1,199 +1,16 @@
 import { applyCountryRules } from "@/lib/routing/applyCountryRules";
-import { geocodeAddressCache } from "@/lib/cache/geocodeCache";
 import { checkRateLimit } from "@/lib/security/rateLimit";
 import { logger } from "@/lib/logging/logger";
 import {
   routeAnalysisRequestSchema,
   formatZodErrors,
 } from "@/lib/validation/schemas";
+import { normalizePoint, resolveLocation } from "@/lib/geocoding/geocode";
 import type { OrsDirectionsResponse } from "@/lib/routing/orsTypes";
-import type { RoutePoint } from "@/types/vignette";
 import { NextResponse } from "next/server";
 
 const ORS_DIRECTIONS_URL = "https://api.openrouteservice.org/v2/directions/driving-car/geojson";
-const ORS_GEOCODE_URL = "https://api.openrouteservice.org/geocode/search";
-const PHOTON_GEOCODE_URL = "https://photon.komoot.io/api/";
-const NOMINATIM_URL = "https://nominatim.openstreetmap.org/search";
 const REQUEST_TIMEOUT_MS = 15_000;
-const DEFAULT_CONTACT_EMAIL = "support@example.com";
-const EUROPE_BOUNDS = {
-  minLat: 34,
-  maxLat: 72,
-  minLon: -12,
-  maxLon: 45,
-};
-
-function getNominatimUserAgent() {
-  const contactEmail = process.env.APP_CONTACT_EMAIL?.trim() || DEFAULT_CONTACT_EMAIL;
-  return `EuropeanVignettePortal/1.0 (contact: ${contactEmail})`;
-}
-
-function normalizePoint(rawValue: string): RoutePoint | null {
-  const parts = rawValue.split(",").map((part) => part.trim());
-  if (parts.length !== 2) {
-    return null;
-  }
-
-  const lat = Number(parts[0]);
-  const lon = Number(parts[1]);
-  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
-    return null;
-  }
-
-  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
-    return null;
-  }
-
-  return { lat, lon };
-}
-
-function isLikelyEurope(point: RoutePoint): boolean {
-  return (
-    point.lat >= EUROPE_BOUNDS.minLat &&
-    point.lat <= EUROPE_BOUNDS.maxLat &&
-    point.lon >= EUROPE_BOUNDS.minLon &&
-    point.lon <= EUROPE_BOUNDS.maxLon
-  );
-}
-
-function normalizeProvidedPoint(point: RoutePoint | undefined): RoutePoint | null {
-  if (!point) {
-    return null;
-  }
-  if (!Number.isFinite(point.lat) || !Number.isFinite(point.lon)) {
-    return null;
-  }
-  if (point.lat < -90 || point.lat > 90 || point.lon < -180 || point.lon > 180) {
-    return null;
-  }
-  return { lat: point.lat, lon: point.lon };
-}
-
-async function geocodeAddress(query: string): Promise<RoutePoint> {
-  // Check cache first to avoid redundant API calls
-  const cacheKey = query.trim().toLowerCase();
-  const cached = geocodeAddressCache.get(cacheKey);
-  if (cached) {
-    return cached;
-  }
-
-  const orsApiKey = process.env.ORS_API_KEY?.trim();
-  if (orsApiKey) {
-    try {
-      const orsPoint = await geocodeAddressWithOrs(query, orsApiKey);
-      if (isLikelyEurope(orsPoint)) {
-        geocodeAddressCache.set(cacheKey, orsPoint);
-        return orsPoint;
-      }
-    } catch {
-      // Continue to public geocoder fallback when ORS geocoding is not available.
-    }
-  }
-
-  try {
-    const photonPoint = await geocodeAddressWithPhoton(query);
-    if (isLikelyEurope(photonPoint)) {
-      geocodeAddressCache.set(cacheKey, photonPoint);
-      return photonPoint;
-    }
-  } catch {
-    // Continue to next fallback.
-  }
-
-  try {
-    const nominatimPoint = await geocodeAddressWithNominatim(query);
-    if (isLikelyEurope(nominatimPoint)) {
-      geocodeAddressCache.set(cacheKey, nominatimPoint);
-      return nominatimPoint;
-    }
-  } catch {
-    throw new Error(`Could not resolve "${query}". Check spelling or try a more specific name with country (e.g., "Lyon, France").`);
-  }
-
-  throw new Error(`Could not confidently locate "${query}" in Europe. Try adding a country name (e.g., "Luter, France").`);
-}
-
-async function geocodeAddressWithOrs(query: string, apiKey: string): Promise<RoutePoint> {
-  const url = `${ORS_GEOCODE_URL}?text=${encodeURIComponent(query)}&size=1`;
-  const response = await fetch(url, {
-    cache: "no-store",
-    headers: { Authorization: apiKey },
-  });
-
-  if (!response.ok) {
-    throw new Error(`ORS geocoding failed (${response.status}).`);
-  }
-
-  const data = (await response.json()) as {
-    features?: Array<{ geometry?: { coordinates?: [number, number] } }>;
-  };
-  const coordinates = data.features?.[0]?.geometry?.coordinates;
-  if (!coordinates || coordinates.length !== 2) {
-    throw new Error("ORS geocoding returned no result.");
-  }
-
-  return {
-    lon: Number(coordinates[0]),
-    lat: Number(coordinates[1]),
-  };
-}
-
-async function geocodeAddressWithNominatim(query: string): Promise<RoutePoint> {
-  const url = `${NOMINATIM_URL}?q=${encodeURIComponent(query)}&format=json&limit=1`;
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": getNominatimUserAgent(),
-    },
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    throw new Error(`Geocoding failed (${response.status}).`);
-  }
-
-  const data = (await response.json()) as Array<{ lat: string; lon: string }>;
-  const match = data[0];
-  if (!match) {
-    throw new Error("Could not resolve one of the locations.");
-  }
-
-  return {
-    lat: Number(match.lat),
-    lon: Number(match.lon),
-  };
-}
-
-async function geocodeAddressWithPhoton(query: string): Promise<RoutePoint> {
-  const url = `${PHOTON_GEOCODE_URL}?q=${encodeURIComponent(query)}&limit=1`;
-  const response = await fetch(url, {
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    throw new Error(`Photon geocoding failed (${response.status}).`);
-  }
-
-  const data = (await response.json()) as {
-    features?: Array<{ geometry?: { coordinates?: [number, number] } }>;
-  };
-  const coordinates = data.features?.[0]?.geometry?.coordinates;
-  if (!coordinates || coordinates.length !== 2) {
-    throw new Error("Photon geocoding returned no result.");
-  }
-
-  return {
-    lon: Number(coordinates[0]),
-    lat: Number(coordinates[1]),
-  };
-}
-
-async function resolveLocation(input: string): Promise<RoutePoint> {
-  const coordinatePoint = normalizePoint(input);
-  if (coordinatePoint) {
-    return coordinatePoint;
-  }
-  return geocodeAddress(input);
-}
 
 /**
  * Return a structured JSON error response with:
@@ -226,8 +43,21 @@ export async function POST(request: Request) {
   }
 
   try {
-    // Parse and validate the request body with Zod
-    const rawBody: unknown = await request.json();
+    // Guard against oversized payloads (max ~10 KB for a route analysis request).
+    // Read the raw text first so we can validate actual size, not just the
+    // Content-Length header (which can be spoofed or missing).
+    const MAX_BODY_BYTES = 10_240;
+    const rawText = await request.text();
+    if (rawText.length > MAX_BODY_BYTES) {
+      return jsonError("Request payload too large.", 413, "PAYLOAD_TOO_LARGE");
+    }
+
+    let rawBody: unknown;
+    try {
+      rawBody = JSON.parse(rawText);
+    } catch {
+      return jsonError("Invalid request format. Please refresh the page and try again.", 400, "INVALID_JSON");
+    }
     const parseResult = routeAnalysisRequestSchema.safeParse(rawBody);
 
     if (!parseResult.success) {
@@ -245,8 +75,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const providedStart = normalizeProvidedPoint(body.startPoint);
-    const providedEnd = normalizeProvidedPoint(body.endPoint);
+    const providedStart = normalizePoint(body.startPoint);
+    const providedEnd = normalizePoint(body.endPoint);
+
     const [startPoint, endPoint] = await Promise.all([
       providedStart ? Promise.resolve(providedStart) : resolveLocation(body.start.trim()),
       providedEnd ? Promise.resolve(providedEnd) : resolveLocation(body.end.trim()),
@@ -290,11 +121,19 @@ export async function POST(request: Request) {
           "ORS_AUTH_FAILED",
         );
       }
-      if (orsResponse.status === 404 && body.avoidTolls) {
+      if (orsResponse.status === 404) {
+        // 404 means ORS could not find any drivable route between the two points
+        if (body.avoidTolls) {
+          return jsonError(
+            "No route found while avoiding toll roads. Try disabling 'Avoid toll roads' or choose different locations.",
+            400,
+            "NO_ROUTE_AVOID_TOLLS",
+          );
+        }
         return jsonError(
-          "No route found while avoiding toll roads. Try disabling 'Avoid toll roads' or choose different locations.",
+          "No drivable route found between these locations. Make sure both points are on the European road network.",
           400,
-          "NO_ROUTE_AVOID_TOLLS",
+          "NO_ROUTE",
         );
       }
       if (orsResponse.status === 400) {
@@ -347,10 +186,6 @@ export async function POST(request: Request) {
         504,
         "TIMEOUT",
       );
-    }
-    if (error instanceof SyntaxError) {
-      logger.warn("Invalid request body", { requestId, durationMs, code: "INVALID_JSON" });
-      return jsonError("Invalid request format. Please refresh the page and try again.", 400, "INVALID_JSON");
     }
     if (error instanceof Error) {
       logger.error("Route analysis failed", { requestId, durationMs, code: "GEOCODE_ERROR", message: error.message });

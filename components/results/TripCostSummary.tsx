@@ -134,6 +134,8 @@ export function TripCostSummary({ result }: { result: RouteAnalysisResult }) {
           <button
             type="button"
             onClick={() => setExpanded((previous) => !previous)}
+            aria-expanded={expanded}
+            aria-label={expanded ? "Hide trip budget details" : "Show trip budget details"}
             className="rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
           >
             {expanded ? t("tripBudget.hideDetails") : t("tripBudget.showDetails")}
