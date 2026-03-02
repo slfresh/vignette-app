@@ -7,14 +7,14 @@ export function LanguageSwitcher() {
   const { locale, setLocale } = useI18n();
 
   return (
-    <div className="inline-flex items-center gap-1 rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs font-medium text-zinc-700">
+    <div className="inline-flex items-center gap-1 rounded-md border border-[var(--border-strong)] bg-surface px-2 py-1 text-xs font-medium text-[var(--text-secondary)]">
       {SUPPORTED_LOCALES.map((entry) => (
         <button
           key={entry.code}
           type="button"
           onClick={() => setLocale(entry.code)}
           className={`rounded px-1.5 py-0.5 transition-colors ${
-            locale === entry.code ? "bg-blue-100 text-blue-800" : "hover:bg-zinc-100"
+            locale === entry.code ? "bg-amber-100 text-[var(--accent)]" : "hover:bg-surface-muted"
           }`}
           title={entry.label}
           aria-label={`Switch language to ${entry.label}`}

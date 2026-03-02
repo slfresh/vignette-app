@@ -132,31 +132,34 @@ export function VignetteResultCard({
 
   return (
     <article
-      className={`rounded-2xl border bg-white shadow-sm transition-colors ${
-        highlighted ? "border-orange-300 ring-2 ring-orange-100" : "border-zinc-200"
-      } overflow-hidden`}
+      className={`overflow-hidden rounded-2xl border bg-surface shadow-sm transition-all hover:shadow-md ${
+        highlighted ? "border-[var(--accent)] ring-2 ring-[var(--accent)]/15" : "border-[var(--border)]"
+      }`}
       onMouseEnter={() => onHover?.(country.countryCode)}
       onMouseLeave={() => onHover?.(null)}
       onFocus={() => onHover?.(country.countryCode)}
       onBlur={() => onHover?.(null)}
     >
+      {/* Accent stripe top */}
+      <div className={`h-1 w-full ${country.requiresVignette ? "bg-[var(--accent)]" : "bg-[var(--accent-green)]"}`} />
+
       <header className="flex items-center justify-between gap-2 p-4">
         <button
           type="button"
-          className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+          className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
           onClick={() => onToggleLock?.(country.countryCode)}
           aria-label={`Select ${COUNTRY_NAMES[country.countryCode]}`}
         >
-          <h3 className="text-lg font-semibold text-zinc-900">
-            {COUNTRY_NAMES[country.countryCode]} <span className="text-sm text-zinc-500">({FLAGS[country.countryCode]})</span>
+          <h3 className="font-[family-name:var(--font-display)] text-lg font-semibold text-[var(--text-primary)]">
+            {COUNTRY_NAMES[country.countryCode]} <span className="text-sm text-[var(--text-muted)]">({FLAGS[country.countryCode]})</span>
           </h3>
-          <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-medium ${country.requiresVignette ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"}`}>
+          <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-medium ${country.requiresVignette ? "bg-[#FDF2F0] text-[var(--accent-red)]" : "bg-[#F0FAF4] text-[var(--accent-green)]"}`}>
             {country.requiresVignette ? t("card.badge.vignetteNeeded") : t("card.badge.noVignette")}
           </span>
         </button>
         <button
           type="button"
-          className="shrink-0 rounded p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+          className="shrink-0 rounded p-1 text-[var(--text-muted)] hover:bg-surface-muted hover:text-[var(--text-secondary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
           aria-expanded={expanded}
           aria-label={`${expanded ? "Collapse" : "Expand"} ${COUNTRY_NAMES[country.countryCode]} details`}
           onClick={() => onExpandToggle?.(country.countryCode)}
@@ -166,55 +169,55 @@ export function VignetteResultCard({
       </header>
 
       {expanded ? (
-        <div className="border-t border-zinc-100 p-4 pt-3">
-      <p className="text-sm text-zinc-600">
-        {t("card.highwayDistance")}: {(country.highwayDistanceMeters / 1000).toFixed(1)} km
-      </p>
+        <div className="border-t border-[var(--border)] bg-surface-muted/30 p-4 pt-3">
+          <p className="text-sm text-[var(--text-muted)]">
+            {t("card.highwayDistance")}: {(country.highwayDistanceMeters / 1000).toFixed(1)} km
+          </p>
 
-      {camperCaution ? <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-2 text-sm text-amber-900">{camperCaution}</p> : null}
+          {camperCaution ? <p className="mt-3 rounded-md border border-[var(--accent)]/20 bg-[#FDF6EC] p-2 text-sm text-[var(--text-secondary)]">{camperCaution}</p> : null}
 
-      {visibleProducts.length ? (
-        <>
-          <p className="mt-3 text-xs font-medium text-zinc-600">{t("card.pricesFor")}: {formatVehicleLabel(vehicleClass, t)}</p>
-          <table className="mt-2 w-full text-sm">
-          <thead>
-            <tr className="text-left text-zinc-500">
-              <th className="py-1">{t("card.col.product")}</th>
-              <th className="py-1">{t("card.col.price")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visibleProducts.map((product) => (
-              <tr key={product.id} className="border-t border-zinc-100">
-                <td className="py-1 pr-2 text-zinc-800">{product.label}</td>
-                <td className="py-1 text-right font-medium tabular-nums text-zinc-700">{formatPriceWithEurEstimate(product.price, product.currency)}</td>
-              </tr>
-            ))}
-          </tbody>
-          </table>
-        </>
-      ) : (
-        <p className="mt-3 rounded-md bg-zinc-50 p-2 text-sm text-zinc-700">{t("card.noTable")}</p>
-      )}
+          {visibleProducts.length ? (
+            <>
+              <p className="mt-3 text-xs font-medium text-[var(--text-muted)]">{t("card.pricesFor")}: {formatVehicleLabel(vehicleClass, t)}</p>
+              <table className="mt-2 w-full text-sm">
+                <thead>
+                  <tr className="text-left text-[var(--text-muted)]">
+                    <th className="py-1">{t("card.col.product")}</th>
+                    <th className="py-1 text-right">{t("card.col.price")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleProducts.map((product) => (
+                    <tr key={product.id} className="border-t border-[var(--border)]">
+                      <td className="py-1.5 pr-2 text-[var(--text-primary)]">{product.label}</td>
+                      <td className="py-1.5 text-right font-[family-name:var(--font-mono)] font-medium tabular-nums text-[var(--text-primary)]">{formatPriceWithEurEstimate(product.price, product.currency)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          ) : (
+            <p className="mt-3 rounded-md bg-surface-muted p-2 text-sm text-[var(--text-secondary)]">{t("card.noTable")}</p>
+          )}
 
-      {country.notices.length ? (
-        <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-zinc-700">
-          {country.notices.map((notice) => (
-            <li key={notice}>{notice}</li>
-          ))}
-        </ul>
-      ) : null}
+          {country.notices.length ? (
+            <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-[var(--text-secondary)]">
+              {country.notices.map((notice) => (
+                <li key={notice}>{notice}</li>
+              ))}
+            </ul>
+          ) : null}
 
-      <a
-        className="mt-4 inline-flex w-full items-center justify-center gap-1 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        href={officialUrl}
-        target="_blank"
-        rel="noreferrer noopener"
-        onClick={(event) => event.stopPropagation()}
-      >
-        {t("card.buyOfficial")}
-        <ExternalLink className="h-4 w-4" />
-      </a>
+          <a
+            className="mt-4 inline-flex w-full items-center justify-center gap-1 rounded-lg bg-[var(--accent)] px-3 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--accent-hover)]"
+            href={officialUrl}
+            target="_blank"
+            rel="noreferrer noopener"
+            onClick={(event) => event.stopPropagation()}
+          >
+            {t("card.buyOfficial")}
+            <ExternalLink className="h-4 w-4" />
+          </a>
         </div>
       ) : null}
     </article>

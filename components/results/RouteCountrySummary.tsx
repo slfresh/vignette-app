@@ -86,12 +86,12 @@ export function RouteCountrySummary({
   );
 
   return (
-    <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-      <h3 className="text-lg font-semibold text-zinc-900">{t("summary.title")}</h3>
+    <section className="rounded-2xl border border-[var(--border)] bg-surface p-4 shadow-sm">
+      <h3 className="font-[family-name:var(--font-display)] text-lg font-semibold text-[var(--text-primary)]">{t("summary.title")}</h3>
 
-      {/* Route order with traffic lights – click to jump to card */}
+      {/* Route order with traffic lights */}
       <div className="mt-4">
-        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">{t("summary.routeOrder")}</p>
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">{t("summary.routeOrder")}</p>
         <div className="flex flex-wrap gap-2">
           {countries.map((country) => (
             <CountryChip
@@ -105,9 +105,9 @@ export function RouteCountrySummary({
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 border-t border-zinc-100 pt-4">
+      <div className="mt-4 grid gap-3 border-t border-[var(--border)] pt-4">
         <div>
-          <p className="mb-2 text-sm font-medium text-zinc-800">{t("summary.vignetteCountries")}</p>
+          <p className="mb-2 text-sm font-medium text-[var(--text-secondary)]">{t("summary.vignetteCountries")}</p>
           <div className="flex flex-wrap gap-2">
             {vignetteCountries.length ? (
               vignetteCountries.map((country) => (
@@ -119,13 +119,13 @@ export function RouteCountrySummary({
                 />
               ))
             ) : (
-              <p className="text-sm text-zinc-500">{t("summary.noneDetected")}</p>
+              <p className="text-sm text-[var(--text-muted)]">{t("summary.noneDetected")}</p>
             )}
           </div>
         </div>
 
         <div>
-          <p className="mb-2 text-sm font-medium text-zinc-800">{t("summary.tollCountries")}</p>
+          <p className="mb-2 text-sm font-medium text-[var(--text-secondary)]">{t("summary.tollCountries")}</p>
           <div className="flex flex-wrap gap-2">
             {tollCountries.length ? (
               tollCountries.map((country) => (
@@ -138,13 +138,13 @@ export function RouteCountrySummary({
                 />
               ))
             ) : (
-              <p className="text-sm text-zinc-500">{t("summary.noneDetected")}</p>
+              <p className="text-sm text-[var(--text-muted)]">{t("summary.noneDetected")}</p>
             )}
           </div>
         </div>
 
         <div>
-          <p className="mb-2 text-sm font-medium text-zinc-800">{t("summary.noFeeCountries")}</p>
+          <p className="mb-2 text-sm font-medium text-[var(--text-secondary)]">{t("summary.noFeeCountries")}</p>
           <div className="flex flex-wrap gap-2">
             {freeCountries.length ? (
               freeCountries.map((country) => (
@@ -156,7 +156,7 @@ export function RouteCountrySummary({
                 />
               ))
             ) : (
-              <p className="text-sm text-zinc-500">{t("summary.noneDetected")}</p>
+              <p className="text-sm text-[var(--text-muted)]">{t("summary.noneDetected")}</p>
             )}
           </div>
         </div>

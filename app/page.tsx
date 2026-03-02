@@ -15,17 +15,29 @@ import { TripCostSummary } from "@/components/results/TripCostSummary";
 import { TripReadinessPanel } from "@/components/results/TripReadinessPanel";
 import { TripShieldPanel } from "@/components/results/TripShieldPanel";
 import { VignetteResultCard } from "@/components/results/VignetteResultCard";
-import type { CountryCode, EmissionClass, PowertrainType, RouteAnalysisResult, RoutePoint, VehicleClass } from "@/types/vignette";
-import { AlertTriangle, RefreshCw, Route } from "lucide-react";
+import type { CountryCode, RoutePoint } from "@/types/vignette";
+import { AlertTriangle, MapPin, RefreshCw } from "lucide-react";
 import dynamic from "next/dynamic";
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useGeolocation } from "@/hooks/useGeolocation";
+import { useRouteAnalysis } from "@/hooks/useRouteAnalysis";
+import { useMapOverlays } from "@/hooks/useMapOverlays";
 
 const UnifiedMap = dynamic(() => import("@/components/map/UnifiedMap").then((mod) => mod.UnifiedMap), {
   ssr: false,
 });
 
-/** Safely decode URL param – prevents %20, %2C etc. from showing in form inputs */
+const TripAssistant = dynamic(() => import("@/components/ai/TripAssistant").then((mod) => mod.TripAssistant), {
+  ssr: false,
+});
+
+const AiTollExplainer = dynamic(() => import("@/components/ai/AiTollExplainer").then((mod) => mod.AiTollExplainer), {
+  ssr: false,
+});
+
+import { VisualRouteTimeline } from "@/components/results/VisualRouteTimeline";
+import { AlternativeRoutesPanel } from "@/components/results/AlternativeRoutesPanel";
+
 function safeDecodeParam(value: string | null): string {
   if (!value) return "";
   try {
@@ -35,16 +47,15 @@ function safeDecodeParam(value: string | null): string {
   }
 }
 
-/** Maps API error codes to user-friendly advice. */
 function getErrorAdvice(code?: string): string | null {
   switch (code) {
     case "RATE_LIMITED":
     case "ORS_RATE_LIMITED":
-      return "Too many route requests. Wait 60 seconds without clicking – repeated clicks reset the cooldown.";
+      return "Too many route requests. Wait 60 seconds without clicking \u2013 repeated clicks reset the cooldown.";
     case "NO_ROUTE":
       return "The routing service could not find a path. Try more specific locations with country names.";
     case "NO_ROUTE_AVOID_TOLLS":
-      return "There's no toll-free route available. Disable 'Avoid toll roads' to see alternatives.";
+      return "There\u2019s no toll-free route available. Disable \u2018Avoid toll roads\u2019 to see alternatives.";
     case "TIMEOUT":
       return "The request took too long. This usually resolves on retry.";
     case "MISSING_API_KEY":
@@ -57,9 +68,9 @@ function getErrorAdvice(code?: string): string | null {
 
 function HomeFallback() {
   return (
-    <main className="mx-auto flex min-h-[60vh] w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-      <p className="text-sm text-zinc-600">Loading...</p>
+    <main className="flex min-h-[60vh] w-full flex-col items-center justify-center gap-4 px-4 py-12">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
+      <p className="text-sm text-[var(--text-muted)]">Loading...</p>
     </main>
   );
 }
@@ -68,19 +79,10 @@ function HomeContent() {
   const { t } = useI18n();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [result, setResult] = useState<RouteAnalysisResult | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [errorCode, setErrorCode] = useState<string | undefined>(undefined);
-  const headerRef = useRef<HTMLElement | null>(null);
-  const [stickyTopPx, setStickyTopPx] = useState(16);
-  const [hoveredCountryCode, setHoveredCountryCode] = useState<CountryCode | null>(null);
-  const [lockedCountryCode, setLockedCountryCode] = useState<CountryCode | null>(null);
-  const [showBorderCameras, setShowBorderCameras] = useState(false);
-  const [expandedCountryCodes, setExpandedCountryCodes] = useState<Set<CountryCode>>(new Set());
-  const lastPayloadRef = useRef<Record<string, unknown> | null>(null);
-  const countryCardRefs = useRef<Record<string, HTMLElement | null>>({});
-  const submitAbortRef = useRef<AbortController | null>(null);
+
+  const route = useRouteAnalysis(router, searchParams);
+  const overlays = useMapOverlays(route.result);
+
   const formRef = useRef<RouteFormHandle | null>(null);
   const [formValues, setFormValues] = useState<{
     start: string;
@@ -89,139 +91,45 @@ function HomeContent() {
     endPoint?: RoutePoint;
   }>({ start: "", end: "" });
 
-  /* Geolocation – auto-ask on load */
   const geo = useGeolocation();
 
-  const submitRoute = useCallback(async (payload: {
-    start: string;
-    end: string;
-    startPoint?: { lat: number; lon: number };
-    endPoint?: { lat: number; lon: number };
-    dateISO?: string;
-    seats?: number;
-    vehicleClass?: VehicleClass;
-    powertrainType?: PowertrainType;
-    grossWeightKg?: number;
-    axles?: number;
-    emissionClass?: EmissionClass;
-    avoidTolls?: boolean;
-    channelCrossingPreference?: "auto" | "ferry" | "tunnel";
-  }) => {
-    setError(null);
-    setErrorCode(undefined);
-    setResult(null);
-    setLoading(true);
-    setHoveredCountryCode(null);
-    setLockedCountryCode(null);
-    setShowBorderCameras(false);
-    setExpandedCountryCodes(new Set());
-    lastPayloadRef.current = payload as Record<string, unknown>;
+  /* ── Mobile bottom sheet state ── */
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const dragStartY = useRef<number | null>(null);
+  const dragDelta = useRef(0);
 
-    try {
-      // Abort any in-flight request before starting a new one
-      submitAbortRef.current?.abort();
-      const abortController = new AbortController();
-      submitAbortRef.current = abortController;
+  const handleSheetPointerDown = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    dragStartY.current = e.clientY;
+    dragDelta.current = 0;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, []);
 
-      const response = await fetch("/api/route-analysis", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-        signal: abortController.signal,
-      });
+  const handleSheetPointerMove = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    if (dragStartY.current === null) return;
+    dragDelta.current = e.clientY - dragStartY.current;
+  }, []);
 
-      if (!response.ok) {
-        const body = (await response.json()) as { error?: string; code?: string };
-        setErrorCode(body.code);
-        throw new Error(body.error ?? "Could not calculate route.");
-      }
+  const handleSheetPointerUp = useCallback(() => {
+    if (dragStartY.current === null) return;
+    if (dragDelta.current < -40) setMobileSheetOpen(true);
+    else if (dragDelta.current > 40) setMobileSheetOpen(false);
+    dragStartY.current = null;
+    dragDelta.current = 0;
+  }, []);
 
-      const data = (await response.json()) as RouteAnalysisResult;
-      setResult(data);
+  const handleSheetFocusIn = useCallback(() => {
+    setMobileSheetOpen(true);
+  }, []);
 
-      const fromParam = encodeURIComponent(payload.start.trim());
-      const toParam = encodeURIComponent(payload.end.trim());
-      const newParams = new URLSearchParams(searchParams.toString());
-      newParams.set("from", fromParam);
-      newParams.set("to", toParam);
-      router.replace(`/?${newParams.toString()}`, { scroll: false });
-    } catch (submitError) {
-      const message = submitError instanceof Error ? submitError.message : "Unexpected error occurred.";
-      setError(message);
-      throw submitError;
-    } finally {
-      setLoading(false);
-    }
-  }, [router, searchParams]);
-
-  const estimatedSavingsEuro = useMemo(() => {
-    if (!result) {
-      return 0;
-    }
-    const requiredCountries = result.countries.filter((country) => country.requiresVignette).length;
-    return requiredCountries * 8.5;
-  }, [result]);
-  const activeCountryCode = lockedCountryCode ?? hoveredCountryCode;
-  const highlightedSegments = useMemo(() => {
-    if (!result || !activeCountryCode) {
-      return [];
-    }
-    const selected = result.countries.find((country) => country.countryCode === activeCountryCode);
-    return selected?.routeSegments ?? [];
-  }, [result, activeCountryCode]);
-
-  /** Always show camera toggle – users can browse all Croatian border cameras regardless of route */
-  const hasBorderCameraData = true;
-
-  // Auto-submit when user lands with a shared URL (?from=X&to=Y)
   const fromUrl = safeDecodeParam(searchParams.get("from"));
   const toUrl = safeDecodeParam(searchParams.get("to"));
+  const { result: routeResult, loading: routeLoading, submitRoute } = route;
   useEffect(() => {
-    if (!fromUrl || !toUrl || result || loading) return;
+    if (!fromUrl || !toUrl || routeResult || routeLoading) return;
     submitRoute({ start: fromUrl, end: toUrl }).catch(() => {});
-  }, [fromUrl, toUrl, result, loading, submitRoute]);
+  }, [fromUrl, toUrl, routeResult, routeLoading, submitRoute]);
 
-  const handleCountrySummaryClick = useCallback((code: CountryCode) => {
-    setLockedCountryCode((prev) => (prev === code ? null : code));
-    setExpandedCountryCodes((prev) => new Set(prev).add(code));
-    const el = countryCardRefs.current[code];
-    el?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, []);
-
-  const handleExpandToggle = useCallback((code: CountryCode) => {
-    setExpandedCountryCodes((prev) => {
-      const next = new Set(prev);
-      if (next.has(code)) next.delete(code);
-      else next.add(code);
-      return next;
-    });
-  }, []);
-
-  useEffect(() => {
-    const header = headerRef.current;
-    if (!header) {
-      return;
-    }
-
-    const updateOffset = () => {
-      const height = header.getBoundingClientRect().height;
-      setStickyTopPx(Math.max(16, Math.round(height + 16)));
-    };
-
-    updateOffset();
-    const observer = new ResizeObserver(() => updateOffset());
-    observer.observe(header);
-    window.addEventListener("resize", updateOffset);
-
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("resize", updateOffset);
-    };
-  }, []);
-
-  /* ── Map select handlers (fill form from map clicks) ── */
   const handleMapSelectStart = useCallback(
     (label: string, point: RoutePoint) => {
       formRef.current?.setStartFromMap(label, point);
@@ -235,189 +143,297 @@ function HomeContent() {
     [],
   );
 
+  /* Auto-calculate: submit form when both points are set via map pick */
+  const lastAutoCalcRef = useRef<{ lat1: number; lon1: number; lat2: number; lon2: number } | null>(null);
+  useEffect(() => {
+    const sp = formValues.startPoint;
+    const ep = formValues.endPoint;
+    if (!sp || !ep) return;
+
+    const key = { lat1: sp.lat, lon1: sp.lon, lat2: ep.lat, lon2: ep.lon };
+    const prev = lastAutoCalcRef.current;
+    if (prev && prev.lat1 === key.lat1 && prev.lon1 === key.lon1 && prev.lat2 === key.lat2 && prev.lon2 === key.lon2) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      lastAutoCalcRef.current = key;
+      formRef.current?.submit();
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [formValues.startPoint, formValues.endPoint]);
+
+  const { setHoveredCountryCode, setLockedCountryCode } = route;
+
+  const handleCountryHover = useCallback(
+    (code: string | null) => setHoveredCountryCode(code as CountryCode | null),
+    [setHoveredCountryCode],
+  );
+
+  const handleCountryLockToggle = useCallback(
+    (code: string) => setLockedCountryCode((prev) => (prev === code ? null : code) as typeof prev),
+    [setLockedCountryCode],
+  );
+
   return (
-    <main id="main-content" className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6" tabIndex={-1}>
-      {/* ── Header ── */}
-      <header ref={headerRef} className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-lg">
-        <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 px-6 py-4">
-          <p className="text-xs font-semibold tracking-wider text-blue-100 uppercase">{t("header.unofficial")}</p>
-          <h1 className="mt-1.5 inline-flex items-center gap-2.5 text-2xl font-bold text-white">
-            <Route className="h-7 w-7" strokeWidth={2.5} />
-            {BRAND.name}
-          </h1>
-          <p className="mt-1 text-sm font-medium text-white/90">{t("header.subtitle")}</p>
-        </div>
-        <div className="px-6 py-3">
-          <p className="text-sm text-zinc-600">{t("header.tagline")}</p>
+    <main id="main-content" className="flex min-h-screen w-full flex-col" tabIndex={-1}>
+      {/* ─── Slim Topbar ─── */}
+      <header className="border-b border-[var(--border)] bg-surface px-6 py-3">
+        <div className="mx-auto flex max-w-7xl items-center justify-between">
+          <div className="flex items-center gap-3">
+            <MapPin className="h-5 w-5 text-[var(--accent)]" strokeWidth={2.5} />
+            <div>
+              <h1 className="font-[family-name:var(--font-display)] text-xl font-bold tracking-tight text-[var(--text-primary)]">
+                {BRAND.name}
+              </h1>
+              <p className="text-xs text-[var(--text-muted)]">{t("header.subtitle")}</p>
+            </div>
+          </div>
+          <p className="hidden text-xs font-medium uppercase tracking-wider text-[var(--accent)] sm:block">
+            {t("header.unofficial")}
+          </p>
         </div>
       </header>
 
-      {/* ── Map + Form grid ──
-          Mobile: Map on top (order-first), Form below
-          Desktop (lg): Form left, Map right (sticky) */}
-      <div className="grid gap-6 lg:grid-cols-[1fr_420px] lg:items-start">
-        <RouteForm
-          ref={formRef}
-          initialStart={fromUrl}
-          initialEnd={toUrl}
-          isSubmitting={loading}
-          onValuesChange={setFormValues}
-          onSubmit={async (payload) => {
-            await submitRoute(payload);
-          }}
-        />
-
-        {/* Unified Map – always visible, transitions between input & route mode */}
-        <div className="order-first lg:order-none lg:sticky" style={{ top: `${stickyTopPx}px` }}>
+      {/* ─── Map Hero ─── */}
+      <div className="relative w-full">
+        {/* Map: full-height on mobile for Google Maps feel, fixed height on tablet/desktop */}
+        <div className="relative isolate h-[calc(100dvh-56px)] w-full sm:h-[55vh] md:h-[65vh]">
           <UnifiedMap
-            /* Input mode props */
             startPoint={formValues.startPoint}
             endPoint={formValues.endPoint}
             onSelectStart={handleMapSelectStart}
             onSelectDestination={handleMapSelectDest}
-            /* Route mode props – only passed when a route has been calculated */
-            routeCoordinates={result?.routeGeoJson.coordinates}
-            highlightedCountryCode={activeCountryCode}
-            highlightedSegments={highlightedSegments}
-            borderCrossings={result?.borderCrossings}
-            showBorderCameras={showBorderCameras}
-            onToggleBorderCameras={setShowBorderCameras}
-            hasBorderCameraData={hasBorderCameraData}
-            /* Geolocation */
+            routeCoordinates={route.result?.routeGeoJson.coordinates}
+            highlightedCountryCode={route.activeCountryCode}
+            highlightedSegments={route.highlightedSegments}
+            borderCrossings={route.result?.borderCrossings}
+            showBorderCameras={overlays.showBorderCameras}
+            onToggleBorderCameras={overlays.setShowBorderCameras}
+            hasBorderCameraData
+            speedCameras={overlays.speedCameras}
+            showSpeedCameras={overlays.showSpeedCameras}
+            onToggleSpeedCameras={overlays.setShowSpeedCameras}
+            speedCamerasAvailable={overlays.speedCamerasAvailable}
+            showHighwayCameras={overlays.showHighwayCameras}
+            onToggleHighwayCameras={overlays.setShowHighwayCameras}
+            showTraffic={overlays.showTraffic}
+            onToggleTraffic={overlays.setShowTraffic}
+            trafficTileUrl={overlays.trafficTileUrl}
             geoPosition={geo.position}
             geoLoading={geo.loading}
           />
         </div>
-      </div>
 
-      {/* ── Error display with actionable advice ── */}
-      {error ? (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 shadow-sm" role="alert">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-red-800">{error}</p>
-              {getErrorAdvice(errorCode) ? (
-                <p className="mt-1 text-xs text-red-600">{getErrorAdvice(errorCode)}</p>
-              ) : null}
-              {/* Retry button for transient errors */}
-              {(errorCode === "TIMEOUT" || errorCode === "ORS_RATE_LIMITED" || errorCode === "ORS_ERROR") && lastPayloadRef.current ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (lastPayloadRef.current) {
-                      submitRoute(lastPayloadRef.current as Parameters<typeof submitRoute>[0]).catch(() => {
-                        // Error is already handled inside submitRoute
-                      });
-                    }
-                  }}
-                  className="mt-2 inline-flex items-center gap-1 rounded-md bg-red-100 px-3 py-1.5 text-xs font-medium text-red-800 hover:bg-red-200"
-                >
-                  <RefreshCw className="h-3 w-3" />
-                  Try again
-                </button>
-              ) : null}
-            </div>
+        {/* Route form: mobile bottom sheet / desktop floating card (single instance) */}
+        <div
+          ref={sheetRef}
+          onFocusCapture={handleSheetFocusIn}
+          className={[
+            /* Mobile: fixed bottom sheet */
+            "fixed inset-x-0 bottom-0 z-[9000] rounded-t-2xl border-t border-[var(--border)] bg-surface shadow-[0_-4px_24px_rgba(0,0,0,0.12)]",
+            "transition-[max-height] duration-300 ease-out",
+            mobileSheetOpen ? "max-h-[85dvh]" : "max-h-[170px]",
+            /* Desktop: absolute floating card */
+            "md:absolute md:inset-x-auto md:bottom-auto md:left-4 md:top-4 md:z-20 md:max-h-none md:w-[420px] md:rounded-2xl md:border-0 md:bg-transparent md:shadow-none xl:w-[440px]",
+          ].join(" ")}
+        >
+          {/* Mobile drag handle */}
+          <div
+            className="flex cursor-grab justify-center pb-1 pt-3 touch-none md:hidden"
+            role="button"
+            tabIndex={0}
+            aria-label="Expand or collapse route form"
+            onClick={() => setMobileSheetOpen((prev) => !prev)}
+            onPointerDown={handleSheetPointerDown}
+            onPointerMove={handleSheetPointerMove}
+            onPointerUp={handleSheetPointerUp}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setMobileSheetOpen((prev) => !prev); }}
+          >
+            <div className={`h-1.5 w-12 rounded-full transition-colors ${mobileSheetOpen ? "bg-[var(--accent)]" : "bg-[var(--border-strong)]"}`} />
+          </div>
+
+          {/* Scrollable on mobile when expanded, normal overflow on desktop */}
+          <div
+            className={[
+              "mobile-sheet-form px-3 pb-4 md:px-0 md:pb-0",
+              mobileSheetOpen ? "overflow-y-auto" : "overflow-hidden",
+              "md:overflow-visible",
+            ].join(" ")}
+            style={{ maxHeight: mobileSheetOpen ? "calc(85dvh - 32px)" : undefined }}
+          >
+            <RouteForm
+              ref={formRef}
+              initialStart={fromUrl}
+              initialEnd={toUrl}
+              isSubmitting={route.loading}
+              onValuesChange={setFormValues}
+              onSubmit={async (payload) => {
+                setMobileSheetOpen(false);
+                await route.submitRoute(payload);
+              }}
+            />
           </div>
         </div>
-      ) : null}
+      </div>
 
-      {/* ── Loading skeleton ── */}
-      {loading && !result ? <ResultsSkeleton /> : null}
-
-      {/* ── Results section ── */}
-      {result ? (
-        <section className="grid gap-6" aria-live="polite">
-          <AppliedPreferencesBanner result={result} />
-
-          {/* Budget Hero – prominent total at top */}
-          {result.tripEstimate && (
-            <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-lg">
-              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-blue-200">
-                  Estimated total budget
-                </p>
-                <p className="mt-1 text-3xl font-bold text-white">
-                  {result.tripEstimate.totalRoadChargesEur.toFixed(2)}{" "}
-                  <span className="text-xl font-semibold text-blue-100">EUR</span>
-                </p>
-              </div>
-              <div className="grid gap-2 px-6 py-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-lg bg-zinc-50 px-3 py-2">
-                  <p className="text-xs text-zinc-500">Vignettes</p>
-                  <p className="font-semibold text-zinc-900">{result.tripEstimate.vignetteEstimateEur.toFixed(2)} EUR</p>
-                </div>
-                <div className="rounded-lg bg-zinc-50 px-3 py-2">
-                  <p className="text-xs text-zinc-500">Section tolls</p>
-                  <p className="font-semibold text-zinc-900">{result.tripEstimate.sectionTollEstimateEur.toFixed(2)} EUR</p>
-                </div>
-                {result.tripEstimate.fuel ? (
-                  <div className="rounded-lg bg-zinc-50 px-3 py-2">
-                    <p className="text-xs text-zinc-500">Fuel estimate</p>
-                    <p className="font-semibold text-zinc-900">~{result.tripEstimate.fuel.estimatedFuelCostEur.toFixed(2)} EUR</p>
-                  </div>
+      {/* ─── Content below map ─── */}
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8 sm:px-6">
+        {/* Error display */}
+        {route.error ? (
+          <div className="rounded-2xl border border-[var(--accent-red)]/20 bg-[#FDF2F0] p-4 shadow-sm" role="alert">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-[var(--accent-red)]" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-[var(--accent-red)]">{route.error}</p>
+                {getErrorAdvice(route.errorCode) ? (
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">{getErrorAdvice(route.errorCode)}</p>
                 ) : null}
-                {result.tripEstimate.electric ? (
-                  <div className="rounded-lg bg-zinc-50 px-3 py-2">
-                    <p className="text-xs text-zinc-500">Charging estimate</p>
-                    <p className="font-semibold text-zinc-900">~{result.tripEstimate.electric.estimatedChargingCostEur.toFixed(2)} EUR</p>
-                  </div>
+                {(route.errorCode === "TIMEOUT" || route.errorCode === "ORS_RATE_LIMITED" || route.errorCode === "ORS_ERROR") && route.lastPayload ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (route.lastPayload) {
+                        route.submitRoute(route.lastPayload).catch(() => {});
+                      }
+                    }}
+                    className="mt-2 inline-flex items-center gap-1 rounded-md bg-[var(--accent-red)]/10 px-3 py-1.5 text-xs font-medium text-[var(--accent-red)] hover:bg-[var(--accent-red)]/20"
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                    {t("errors.tryAgain")}
+                  </button>
                 ) : null}
-                <div className="rounded-lg bg-zinc-50 px-3 py-2">
-                  <p className="text-xs text-zinc-500">Total distance</p>
-                  <p className="font-semibold text-zinc-900">{result.tripEstimate.totalDistanceKm.toFixed(0)} km</p>
-                </div>
               </div>
             </div>
-          )}
-
-          <TripShieldPanel
-            tripShield={result.tripShield}
-            routeCountries={result.countries.map((country) => country.countryCode)}
-            showBorderCameras={showBorderCameras}
-            onShowBorderCamerasChange={setShowBorderCameras}
-            hasBorderCameraData={hasBorderCameraData}
-          />
-
-          {/* Route summary + country cards */}
-          <RouteCountrySummary countries={result.countries} onCountryClick={handleCountrySummaryClick} />
-
-          <TripReadinessPanel result={result} />
-          <TripCostSummary result={result} />
-          <SectionTollAlert notices={result.sectionTolls} />
-
-          <div className="grid gap-4 md:grid-cols-2">
-            {result.countries.map((country, index) => {
-              const isFirst = index === 0;
-              const expanded = isFirst || activeCountryCode === country.countryCode || expandedCountryCodes.has(country.countryCode);
-              return (
-                <div
-                  key={country.countryCode}
-                  ref={(el) => { countryCardRefs.current[country.countryCode] = el; }}
-                >
-                  <VignetteResultCard
-                    country={country}
-                    vehicleClass={result.appliedPreferences?.vehicleClass ?? "PASSENGER_CAR_M1"}
-                    powertrainType={result.appliedPreferences?.powertrainType ?? "PETROL"}
-                    highlighted={activeCountryCode === country.countryCode}
-                    expanded={expanded}
-                    onHover={(code) => setHoveredCountryCode(code)}
-                    onToggleLock={(code) => {
-                      setLockedCountryCode((previous) => (previous === code ? null : code));
-                    }}
-                    onExpandToggle={handleExpandToggle}
-                  />
-                </div>
-              );
-            })}
           </div>
+        ) : null}
 
-          <MonetizationPanel estimatedSavingsEuro={estimatedSavingsEuro} />
-          <ComplianceBadge compliance={result.compliance} />
-        </section>
-      ) : null}
+        {/* Loading skeleton */}
+        {route.loading && !route.result ? <ResultsSkeleton /> : null}
+
+        {/* Results section */}
+        {route.result ? (
+          <section className="grid gap-6" aria-live="polite">
+            <AppliedPreferencesBanner result={route.result} />
+
+            {/* Budget Hero */}
+            {route.result.tripEstimate && (
+              <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-surface shadow-sm">
+                <div className="border-b border-[var(--border)] bg-surface-muted px-6 py-6">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                    {t("results.estimatedBudget")}
+                  </p>
+                  <p className="mt-2 font-[family-name:var(--font-display)] text-5xl font-bold tracking-tight text-[var(--text-primary)] sm:text-6xl">
+                    {route.result.tripEstimate.totalRoadChargesEur.toFixed(2)}
+                    <span className="ml-2 font-[family-name:var(--font-sans)] text-2xl font-medium text-[var(--text-muted)]">EUR</span>
+                  </p>
+                </div>
+                <div className="grid gap-2 px-6 py-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="rounded-lg bg-surface-muted px-3 py-2">
+                    <p className="text-xs text-[var(--text-muted)]">{t("results.vignettes")}</p>
+                    <p className="font-[family-name:var(--font-mono)] font-semibold text-[var(--text-primary)]">{route.result.tripEstimate.vignetteEstimateEur.toFixed(2)} EUR</p>
+                  </div>
+                  <div className="rounded-lg bg-surface-muted px-3 py-2">
+                    <p className="text-xs text-[var(--text-muted)]">{t("results.sectionTolls")}</p>
+                    <p className="font-[family-name:var(--font-mono)] font-semibold text-[var(--text-primary)]">{route.result.tripEstimate.sectionTollEstimateEur.toFixed(2)} EUR</p>
+                  </div>
+                  {route.result.tripEstimate.fuel ? (
+                    <div className="rounded-lg bg-surface-muted px-3 py-2">
+                      <p className="text-xs text-[var(--text-muted)]">{t("results.fuelEstimate")}</p>
+                      <p className="font-[family-name:var(--font-mono)] font-semibold text-[var(--text-primary)]">~{route.result.tripEstimate.fuel.estimatedFuelCostEur.toFixed(2)} EUR</p>
+                    </div>
+                  ) : null}
+                  {route.result.tripEstimate.electric ? (
+                    <div className="rounded-lg bg-surface-muted px-3 py-2">
+                      <p className="text-xs text-[var(--text-muted)]">{t("results.chargingEstimate")}</p>
+                      <p className="font-[family-name:var(--font-mono)] font-semibold text-[var(--text-primary)]">~{route.result.tripEstimate.electric.estimatedChargingCostEur.toFixed(2)} EUR</p>
+                    </div>
+                  ) : null}
+                  <div className="rounded-lg bg-surface-muted px-3 py-2">
+                    <p className="text-xs text-[var(--text-muted)]">{t("results.totalDistance")}</p>
+                    <p className="font-[family-name:var(--font-mono)] font-semibold text-[var(--text-primary)]">{route.result.tripEstimate.totalDistanceKm.toFixed(0)} km</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <TripShieldPanel
+              tripShield={route.result.tripShield}
+              routeCountries={route.result.countries.map((c) => c.countryCode)}
+              showBorderCameras={overlays.showBorderCameras}
+              onShowBorderCamerasChange={overlays.setShowBorderCameras}
+              hasBorderCameraData
+            />
+
+            <VisualRouteTimeline result={route.result} />
+            <AiTollExplainer result={route.result} />
+            <RouteCountrySummary countries={route.result.countries} onCountryClick={route.handleCountrySummaryClick} />
+            <TripReadinessPanel result={route.result} />
+            <TripCostSummary result={route.result} />
+            <SectionTollAlert notices={route.result.sectionTolls} />
+
+            <div className="grid gap-4 md:grid-cols-2">
+              {route.result.countries.map((country, index) => {
+                const isFirst = index === 0;
+                const expanded = isFirst || route.activeCountryCode === country.countryCode || route.expandedCountryCodes.has(country.countryCode);
+                return (
+                  <div
+                    key={country.countryCode}
+                    ref={(el) => { route.countryCardRefs.current[country.countryCode] = el; }}
+                  >
+                    <VignetteResultCard
+                      country={country}
+                      vehicleClass={route.result!.appliedPreferences?.vehicleClass ?? "PASSENGER_CAR_M1"}
+                      powertrainType={route.result!.appliedPreferences?.powertrainType ?? "PETROL"}
+                      highlighted={route.activeCountryCode === country.countryCode}
+                      expanded={expanded}
+                      onHover={handleCountryHover}
+                      onToggleLock={handleCountryLockToggle}
+                      onExpandToggle={route.handleExpandToggle}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+
+            <AlternativeRoutesPanel
+              currentResult={route.result}
+              onRequestAlternative={route.fetchAlternativeRoute}
+              currentAvoidsTolls={route.result.appliedPreferences?.avoidTolls ?? false}
+            />
+
+            <MonetizationPanel estimatedSavingsEuro={route.estimatedSavingsEuro} />
+            <ComplianceBadge compliance={route.result.compliance} />
+          </section>
+        ) : null}
+      </div>
 
       <ConsentBanner />
+
+      {/* AI Trip Assistant FAB */}
+      <button
+        type="button"
+        onClick={() => overlays.setShowAiChat((prev) => !prev)}
+        className="fixed bottom-6 right-6 z-[9999] flex h-14 w-14 items-center justify-center rounded-full bg-[var(--accent)] text-white shadow-lg transition-all hover:bg-[var(--accent-hover)] hover:scale-105 active:scale-95"
+        aria-label={overlays.showAiChat ? "Close AI assistant" : "Open AI trip assistant"}
+        aria-expanded={overlays.showAiChat}
+        title="AI Trip Assistant"
+      >
+        {overlays.showAiChat ? (
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+          </svg>
+        ) : (
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+        )}
+      </button>
+      <TripAssistant
+        routeResult={route.result}
+        isOpen={overlays.showAiChat}
+        onClose={() => overlays.setShowAiChat(false)}
+      />
     </main>
   );
 }

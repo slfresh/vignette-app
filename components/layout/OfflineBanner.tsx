@@ -40,7 +40,7 @@ export function OfflineBanner() {
   return (
     <div
       role="alert"
-      className="safe-bottom fixed bottom-0 left-0 right-0 z-50 flex items-center justify-center gap-2 bg-amber-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg"
+      className="safe-bottom fixed bottom-0 left-0 right-0 z-50 flex items-center justify-center gap-2 bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-white shadow-lg"
     >
       <WifiOff className="h-4 w-4" />
       {t("offline.message")}

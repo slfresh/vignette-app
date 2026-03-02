@@ -6,22 +6,31 @@ import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { FooterNav } from "@/components/layout/FooterNav";
 import { OfflineBanner } from "@/components/layout/OfflineBanner";
 import { TopRightControls } from "@/components/theme/TopRightControls";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Playfair_Display, DM_Sans, DM_Mono } from "next/font/google";
 import "./globals.css";
 
 const SUPPORTED_LOCALE_CODES = ["en", "de", "tr", "pl", "ro"];
 
-// Fail fast in production if LEGAL_* env vars are missing
 assertLegalProfileConfigured();
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const playfairDisplay = Playfair_Display({
+  variable: "--font-display",
   subsets: ["latin"],
+  display: "swap",
+  weight: ["400", "500", "600", "700", "800"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const dmSans = DM_Sans({
+  variable: "--font-sans",
   subsets: ["latin"],
+  display: "swap",
+});
+
+const dmMono = DM_Mono({
+  variable: "--font-mono",
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
@@ -46,7 +55,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#2563eb",
+  themeColor: "#F5F0E8",
 };
 
 /**
@@ -79,26 +88,15 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Read locale from cookie (set by I18nProvider on the client)
   const cookieStore = await cookies();
   const localeCookie = cookieStore.get("eurodrive-locale")?.value ?? "en";
   const htmlLang = SUPPORTED_LOCALE_CODES.includes(localeCookie) ? localeCookie : "en";
-  const themeBootScript = `
-    (function(){
-      try {
-        var stored = localStorage.getItem('eurodrive-theme');
-        var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        var mode = stored || (prefersDark ? 'dark' : 'light');
-        if (mode === 'dark') document.documentElement.classList.add('theme-dark');
-        else document.documentElement.classList.remove('theme-dark');
-      } catch (e) {}
-    })();
-  `;
+
+  const themeBootScript = `(function(){try{var s=localStorage.getItem('eurodrive-theme');var d=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;var m=s||(d?'dark':'light');if(m==='dark')document.documentElement.classList.add('theme-dark');else document.documentElement.classList.remove('theme-dark')}catch(e){}})();`;
 
   return (
     <html lang={htmlLang} suppressHydrationWarning>
       <head>
-        {/* Structured data for search engines */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -106,13 +104,13 @@ export default async function RootLayout({
       </head>
       <body
         suppressHydrationWarning
-        className={`${geistSans.variable} ${geistMono.variable} bg-zinc-50 text-zinc-900 antialiased`}
+        className={`${playfairDisplay.variable} ${dmSans.variable} ${dmMono.variable} bg-background text-foreground antialiased`}
       >
         <I18nProvider>
           <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
           <a
             href="#main-content"
-            className="fixed left-4 top-4 z-[100] -translate-y-20 rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg transition-transform duration-150 focus:translate-y-0 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="fixed left-4 top-4 z-[100] -translate-y-20 rounded-md bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-white shadow-lg transition-transform duration-150 focus:translate-y-0 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/50 focus:ring-offset-2"
           >
             Skip to content
           </a>
@@ -122,8 +120,10 @@ export default async function RootLayout({
             </div>
           </div>
           {children}
-          <footer className="mt-8 border-t border-zinc-200 bg-white">
-            <FooterNav />
+          <footer className="mt-8 border-t border-[var(--border-strong)] bg-[var(--foreground)]">
+            <div className="[&_*]:text-[#EDE7D9] [&_p]:text-[#F5F0E8]">
+              <FooterNav />
+            </div>
           </footer>
           <OfflineBanner />
         </I18nProvider>

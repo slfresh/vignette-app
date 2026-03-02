@@ -117,14 +117,14 @@ export function TripCostSummary({ result }: { result: RouteAnalysisResult }) {
   }
 
   return (
-    <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+    <section className="rounded-2xl border border-[var(--border)] bg-surface p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <h3 className="text-base font-semibold text-zinc-900">{t("tripBudget.title")}</h3>
+          <h3 className="font-[family-name:var(--font-display)] text-base font-semibold text-[var(--text-primary)]">{t("tripBudget.title")}</h3>
           {(() => {
             const { label, isStale } = getOldestUpdateDate();
             return (
-              <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${isStale ? "bg-amber-100 text-amber-800" : "bg-zinc-100 text-zinc-600"}`}>
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${isStale ? "bg-amber-100 text-amber-800" : "bg-surface-muted text-[var(--text-muted)]"}`}>
                 {isStale ? "\u26A0 " : ""}Data: {label}
               </span>
             );
@@ -136,14 +136,14 @@ export function TripCostSummary({ result }: { result: RouteAnalysisResult }) {
             onClick={() => setExpanded((previous) => !previous)}
             aria-expanded={expanded}
             aria-label={expanded ? "Hide trip budget details" : "Show trip budget details"}
-            className="rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+            className="rounded-md border border-[var(--border-strong)] px-2 py-1 text-xs font-medium text-[var(--text-secondary)] hover:bg-surface-muted"
           >
             {expanded ? t("tripBudget.hideDetails") : t("tripBudget.showDetails")}
           </button>
           <button
             type="button"
             onClick={copySummary}
-            className="rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+            className="rounded-md border border-[var(--border-strong)] px-2 py-1 text-xs font-medium text-[var(--text-secondary)] hover:bg-surface-muted"
           >
             {t("tripBudget.copySummary")}
           </button>
@@ -151,41 +151,41 @@ export function TripCostSummary({ result }: { result: RouteAnalysisResult }) {
             href={whatsappShareUrl}
             target="_blank"
             rel="noreferrer noopener"
-            className="rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+            className="rounded-md border border-[var(--border-strong)] px-2 py-1 text-xs font-medium text-[var(--text-secondary)] hover:bg-surface-muted"
           >
             {t("tripBudget.shareWhatsApp")}
           </a>
-          <a href={emailShareUrl} className="rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50">
+          <a href={emailShareUrl} className="rounded-md border border-[var(--border-strong)] px-2 py-1 text-xs font-medium text-[var(--text-secondary)] hover:bg-surface-muted">
             {t("tripBudget.shareEmail")}
           </a>
         </div>
       </div>
       <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
-        <p className="rounded-md bg-zinc-50 px-3 py-2 text-zinc-800">{t("tripBudget.totalDistance")}: {estimate.totalDistanceKm.toFixed(1)} km</p>
-        <p className="rounded-md bg-zinc-50 px-3 py-2 text-zinc-800">{t("tripBudget.vignetteEstimate")}: {estimate.vignetteEstimateEur.toFixed(2)} EUR</p>
-        <p className="rounded-md bg-zinc-50 px-3 py-2 text-zinc-800">{t("tripBudget.sectionTollEstimate")}: {estimate.sectionTollEstimateEur.toFixed(2)} EUR</p>
-        <p className="rounded-md bg-zinc-50 px-3 py-2 text-zinc-800">{t("tripBudget.roadChargesTotal")}: {estimate.totalRoadChargesEur.toFixed(2)} EUR</p>
+        <p className="rounded-md bg-surface-muted px-3 py-2 text-[var(--text-secondary)]"><span className="font-[family-name:var(--font-mono)]">{t("tripBudget.totalDistance")}: {estimate.totalDistanceKm.toFixed(1)} km</span></p>
+        <p className="rounded-md bg-surface-muted px-3 py-2 text-[var(--text-secondary)]"><span className="font-[family-name:var(--font-mono)]">{t("tripBudget.vignetteEstimate")}: {estimate.vignetteEstimateEur.toFixed(2)} EUR</span></p>
+        <p className="rounded-md bg-surface-muted px-3 py-2 text-[var(--text-secondary)]"><span className="font-[family-name:var(--font-mono)]">{t("tripBudget.sectionTollEstimate")}: {estimate.sectionTollEstimateEur.toFixed(2)} EUR</span></p>
+        <p className="rounded-md bg-surface-muted px-3 py-2 text-[var(--text-secondary)]"><span className="font-[family-name:var(--font-mono)]">{t("tripBudget.roadChargesTotal")}: {estimate.totalRoadChargesEur.toFixed(2)} EUR</span></p>
         {estimate.powertrain === "electric" && estimate.electric ? (
           <>
-            <p className="rounded-md bg-zinc-50 px-3 py-2 text-zinc-800">{t("tripBudget.energyNeed")}: {estimate.electric.kwhNeeded.toFixed(1)} kWh</p>
-            <p className="rounded-md bg-zinc-50 px-3 py-2 text-zinc-800">
-              {t("tripBudget.chargingEstimate")}: ~{estimate.electric.estimatedChargingCostEur.toFixed(2)} EUR
+            <p className="rounded-md bg-surface-muted px-3 py-2 text-[var(--text-secondary)]"><span className="font-[family-name:var(--font-mono)]">{t("tripBudget.energyNeed")}: {estimate.electric.kwhNeeded.toFixed(1)} kWh</span></p>
+            <p className="rounded-md bg-surface-muted px-3 py-2 text-[var(--text-secondary)]">
+              <span className="font-[family-name:var(--font-mono)]">{t("tripBudget.chargingEstimate")}: ~{estimate.electric.estimatedChargingCostEur.toFixed(2)} EUR</span>
             </p>
           </>
         ) : estimate.fuel ? (
           <>
-            <p className="rounded-md bg-zinc-50 px-3 py-2 text-zinc-800">
-              {t("tripBudget.fuelNeed")} ({estimate.fuel.assumedFuelType}): {estimate.fuel.litersNeeded.toFixed(1)} L
+            <p className="rounded-md bg-surface-muted px-3 py-2 text-[var(--text-secondary)]">
+              <span className="font-[family-name:var(--font-mono)]">{t("tripBudget.fuelNeed")} ({estimate.fuel.assumedFuelType}): {estimate.fuel.litersNeeded.toFixed(1)} L</span>
             </p>
-            <p className="rounded-md bg-zinc-50 px-3 py-2 text-zinc-800">
-              {t("tripBudget.fuelEstimate")}: {estimate.fuel.estimatedFuelCostEur.toFixed(2)} EUR
+            <p className="rounded-md bg-surface-muted px-3 py-2 text-[var(--text-secondary)]">
+              <span className="font-[family-name:var(--font-mono)]">{t("tripBudget.fuelEstimate")}: {estimate.fuel.estimatedFuelCostEur.toFixed(2)} EUR</span>
             </p>
           </>
         ) : null}
       </div>
       <div aria-live="polite" className="mt-2">
-        {copyState === "copied" ? <p className="text-xs text-emerald-700">{t("tripBudget.copied")}</p> : null}
-        {copyState === "error" ? <p className="text-xs text-red-700">{t("tripBudget.copyError")}</p> : null}
+        {copyState === "copied" ? <p className="text-xs text-[var(--accent-green)]">{t("tripBudget.copied")}</p> : null}
+        {copyState === "error" ? <p className="text-xs text-[var(--accent-red)]">{t("tripBudget.copyError")}</p> : null}
       </div>
 
       {estimate.fuel?.fuelStrategy ? (
@@ -197,7 +197,7 @@ export function TripCostSummary({ result }: { result: RouteAnalysisResult }) {
         <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-900">
           <p className="font-semibold">⛽ Cheapest fuel found</p>
           <p className="mt-1">
-            {COUNTRY_LABELS[estimate.fuel.bestTopUpCountryCode]} ({estimate.fuel.bestTopUpPriceEurPerLiter?.toFixed(2)} EUR/L).
+            {COUNTRY_LABELS[estimate.fuel.bestTopUpCountryCode]} (<span className="font-[family-name:var(--font-mono)]">{estimate.fuel.bestTopUpPriceEurPerLiter?.toFixed(2)} EUR/L</span>).
             Plan stops accordingly based on your tank range ({estimate.fuel.estimatedRangePerFullTankKm} km).
           </p>
         </div>
@@ -205,20 +205,20 @@ export function TripCostSummary({ result }: { result: RouteAnalysisResult }) {
       {estimate.electric?.bestChargeCountryCode ? (
         <p className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
           {t("tripBudget.bestCharge")}: {COUNTRY_LABELS[estimate.electric.bestChargeCountryCode]} at about{" "}
-          {estimate.electric.bestChargePriceEurPerKwh?.toFixed(2)} EUR/kWh.
+          <span className="font-[family-name:var(--font-mono)]">{estimate.electric.bestChargePriceEurPerKwh?.toFixed(2)} EUR/kWh</span>.
         </p>
       ) : null}
 
       {expanded && estimate.vignetteBreakdown.length ? (
-        <div className="mt-3 rounded-md border border-zinc-200 bg-zinc-50 p-3">
-          <p className="text-sm font-semibold text-zinc-900">{t("tripBudget.vignetteByCountry")}</p>
-          <ul className="mt-2 space-y-1 text-sm text-zinc-800">
+        <div className="mt-3 rounded-md border border-[var(--border)] bg-surface-muted p-3">
+          <p className="text-sm font-semibold text-[var(--text-primary)]">{t("tripBudget.vignetteByCountry")}</p>
+          <ul className="mt-2 space-y-1 text-sm text-[var(--text-secondary)]">
             {estimate.vignetteBreakdown.map((item) => (
               <li key={`${item.countryCode}-${item.productLabel}`} className="flex items-center justify-between gap-3">
                 <span>
                   {getFlagEmoji(item.countryCode)} {COUNTRY_LABELS[item.countryCode]} - {item.productLabel}
                 </span>
-                <span className="whitespace-nowrap">
+                <span className="whitespace-nowrap font-[family-name:var(--font-mono)]">
                   {formatOriginalPrice(item.originalPrice.amount, item.originalPrice.currency)} (≈ {item.priceEur.toFixed(2)} EUR)
                 </span>
               </li>
@@ -228,61 +228,61 @@ export function TripCostSummary({ result }: { result: RouteAnalysisResult }) {
       ) : null}
 
       {expanded && estimate.sectionTollBreakdown.length ? (
-        <div className="mt-3 rounded-md border border-zinc-200 bg-zinc-50 p-3">
-          <p className="text-sm font-semibold text-zinc-900">{t("tripBudget.sectionByCountry")}</p>
-          <ul className="mt-2 space-y-1 text-sm text-zinc-800">
+        <div className="mt-3 rounded-md border border-[var(--border)] bg-surface-muted p-3">
+          <p className="text-sm font-semibold text-[var(--text-primary)]">{t("tripBudget.sectionByCountry")}</p>
+          <ul className="mt-2 space-y-1 text-sm text-[var(--text-secondary)]">
             {estimate.sectionTollBreakdown.map((item) => (
               <li key={`section-${item.countryCode}`} className="flex items-center justify-between gap-3">
                 <span>
                   {getFlagEmoji(item.countryCode)} {COUNTRY_LABELS[item.countryCode]}
                 </span>
-                <span className="whitespace-nowrap">≈ {item.estimatedEur.toFixed(2)} EUR</span>
+                <span className="whitespace-nowrap font-[family-name:var(--font-mono)]">≈ {item.estimatedEur.toFixed(2)} EUR</span>
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-xs text-zinc-600">
+          <p className="mt-2 text-xs text-[var(--text-muted)]">
             {t("tripBudget.sectionExplain")}
           </p>
         </div>
       ) : null}
 
       {expanded && estimate.fuel?.routeCountryFuelPrices.length ? (
-        <div className="mt-3 rounded-md border border-zinc-200 bg-zinc-50 p-3">
-          <p className="text-sm font-semibold text-zinc-900">{t("tripBudget.fuelComparison")}</p>
-          <ul className="mt-2 grid gap-1 text-sm text-zinc-800 sm:grid-cols-2">
+        <div className="mt-3 rounded-md border border-[var(--border)] bg-surface-muted p-3">
+          <p className="text-sm font-semibold text-[var(--text-primary)]">{t("tripBudget.fuelComparison")}</p>
+          <ul className="mt-2 grid gap-1 text-sm text-[var(--text-secondary)] sm:grid-cols-2">
             {estimate.fuel.routeCountryFuelPrices.map((item) => (
-              <li key={`fuel-${item.countryCode}`} className="flex items-center justify-between gap-2 rounded border border-zinc-200 bg-white px-2 py-1">
+              <li key={`fuel-${item.countryCode}`} className="flex items-center justify-between gap-2 rounded border border-[var(--border)] bg-surface px-2 py-1">
                 <span>
                   {getFlagEmoji(item.countryCode)} {COUNTRY_LABELS[item.countryCode]}
                 </span>
-                <span className="whitespace-nowrap">{item.priceEurPerLiter.toFixed(2)} EUR/L</span>
+                <span className="whitespace-nowrap font-[family-name:var(--font-mono)]">{item.priceEurPerLiter.toFixed(2)} EUR/L</span>
               </li>
             ))}
           </ul>
         </div>
       ) : null}
       {expanded && estimate.electric?.routeCountryChargingPrices.length ? (
-        <div className="mt-3 rounded-md border border-zinc-200 bg-zinc-50 p-3">
-          <p className="text-sm font-semibold text-zinc-900">{t("tripBudget.chargingComparison")}</p>
-          <ul className="mt-2 grid gap-1 text-sm text-zinc-800 sm:grid-cols-2">
+        <div className="mt-3 rounded-md border border-[var(--border)] bg-surface-muted p-3">
+          <p className="text-sm font-semibold text-[var(--text-primary)]">{t("tripBudget.chargingComparison")}</p>
+          <ul className="mt-2 grid gap-1 text-sm text-[var(--text-secondary)] sm:grid-cols-2">
             {estimate.electric.routeCountryChargingPrices.map((item) => (
-              <li key={`charge-${item.countryCode}`} className="flex items-center justify-between gap-2 rounded border border-zinc-200 bg-white px-2 py-1">
+              <li key={`charge-${item.countryCode}`} className="flex items-center justify-between gap-2 rounded border border-[var(--border)] bg-surface px-2 py-1">
                 <span>
                   {getFlagEmoji(item.countryCode)} {COUNTRY_LABELS[item.countryCode]}
                 </span>
-                <span className="whitespace-nowrap">{item.priceEurPerKwh.toFixed(2)} EUR/kWh</span>
+                <span className="whitespace-nowrap font-[family-name:var(--font-mono)]">{item.priceEurPerKwh.toFixed(2)} EUR/kWh</span>
               </li>
             ))}
           </ul>
         </div>
       ) : null}
 
-      <div className="mt-3 rounded-md border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
+      <div className="mt-3 rounded-md border border-[var(--border)] bg-surface-muted p-3 text-sm text-[var(--text-primary)]">
         <p className="font-semibold">{estimate.powertrain === "electric" ? t("tripBudget.chargePlan") : t("tripBudget.refuelPlan")}</p>
         {estimate.powertrain === "electric" && estimate.electric ? (
           <>
             <p className="mt-1">
-              {t("tripBudget.estimatedRangeCharge")}: <span className="font-medium">{estimate.electric.estimatedRangePerFullChargeKm} km</span>.
+              {t("tripBudget.estimatedRangeCharge")}: <span className="font-[family-name:var(--font-mono)] font-medium">{estimate.electric.estimatedRangePerFullChargeKm} km</span>.
             </p>
             {estimate.electric.suggestedChargeCountries.length ? (
               <p className="mt-1">
@@ -299,7 +299,7 @@ export function TripCostSummary({ result }: { result: RouteAnalysisResult }) {
         ) : estimate.fuel ? (
           <>
             <p className="mt-1">
-              {t("tripBudget.estimatedRangeTank")}: <span className="font-medium">{estimate.fuel.estimatedRangePerFullTankKm} km</span>.
+              {t("tripBudget.estimatedRangeTank")}: <span className="font-[family-name:var(--font-mono)] font-medium">{estimate.fuel.estimatedRangePerFullTankKm} km</span>.
             </p>
             {estimate.fuel.suggestedTopUpCountries.length ? (
               <p className="mt-1">
@@ -317,27 +317,27 @@ export function TripCostSummary({ result }: { result: RouteAnalysisResult }) {
       </div>
 
       {expanded && estimate.fuel?.routeCountryFuelPrices.length ? (
-        <p className="mt-2 text-xs text-zinc-600">
+        <p className="mt-2 text-xs text-[var(--text-muted)]">
           {t("tripBudget.fuelComparisonNote")}{" "}
-          {estimate.fuel.averagePricePerLiterEur.toFixed(2)} EUR/L.
+          <span className="font-[family-name:var(--font-mono)]">{estimate.fuel.averagePricePerLiterEur.toFixed(2)} EUR/L</span>.
         </p>
       ) : null}
       {expanded && estimate.electric?.routeCountryChargingPrices.length ? (
-        <p className="mt-2 text-xs text-zinc-600">
+        <p className="mt-2 text-xs text-[var(--text-muted)]">
           {t("tripBudget.chargeComparisonNote")}{" "}
-          {estimate.electric.averagePricePerKwhEur.toFixed(2)} EUR/kWh. Real charging cost can vary by network, charger type,
+          <span className="font-[family-name:var(--font-mono)]">{estimate.electric.averagePricePerKwhEur.toFixed(2)} EUR/kWh</span>. Real charging cost can vary by network, charger type,
           weather, and subscription.
         </p>
       ) : null}
 
       {expanded ? (
         <>
-          <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-zinc-600">
+          <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-[var(--text-muted)]">
             {estimate.assumptions.map((assumption) => (
               <li key={assumption}>{assumption}</li>
             ))}
           </ul>
-          <p className="mt-3 text-xs text-zinc-500">
+          <p className="mt-3 text-xs text-[var(--text-muted)]">
             {t("tripBudget.referenceUpdated")}: exchange rates {formatUpdatedDate(EXCHANGE_RATES_LAST_UPDATED)}, fuel prices{" "}
             {formatUpdatedDate(FUEL_ESTIMATES_LAST_UPDATED)}, charging prices {formatUpdatedDate(ELECTRICITY_ESTIMATES_LAST_UPDATED)},
             section toll references{" "}

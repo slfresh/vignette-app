@@ -28,6 +28,12 @@ export function timeoutSignal(ms: number): { signal: AbortSignal; clear: () => v
   return { signal: controller.signal, clear: () => clearTimeout(id) };
 }
 
+/** Wrap a longitude value into the standard -180 to 180 range. */
+export function wrapLongitude(lng: number): number {
+  if (lng >= -180 && lng <= 180) return lng;
+  return ((((lng + 180) % 360) + 360) % 360) - 180;
+}
+
 /** Parse a "lat,lon" string into a RoutePoint, or null if not valid coordinates. */
 export function parseCoordinates(rawValue: string): RoutePoint | null {
   const parts = rawValue.split(",").map((part) => part.trim());
@@ -36,17 +42,17 @@ export function parseCoordinates(rawValue: string): RoutePoint | null {
   const lat = Number(parts[0]);
   const lon = Number(parts[1]);
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
+  if (lat < -90 || lat > 90) return null;
 
-  return { lat, lon };
+  return { lat, lon: wrapLongitude(lon) };
 }
 
 /** Validate and normalize a RoutePoint, returning null if invalid. */
 export function normalizePoint(point: RoutePoint | undefined): RoutePoint | null {
   if (!point) return null;
   if (!Number.isFinite(point.lat) || !Number.isFinite(point.lon)) return null;
-  if (point.lat < -90 || point.lat > 90 || point.lon < -180 || point.lon > 180) return null;
-  return { lat: point.lat, lon: point.lon };
+  if (point.lat < -90 || point.lat > 90) return null;
+  return { lat: point.lat, lon: wrapLongitude(point.lon) };
 }
 
 function getNominatimUserAgent(): string {

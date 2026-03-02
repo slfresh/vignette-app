@@ -118,13 +118,25 @@ describe("routeAnalysisRequestSchema", () => {
     expect(result2.success).toBe(false);
   });
 
-  it("rejects invalid lat/lon in startPoint", () => {
+  it("rejects invalid lat in startPoint", () => {
     const result = routeAnalysisRequestSchema.safeParse({
       start: "Munich",
       end: "Berlin",
       startPoint: { lat: 91, lon: 0 },
     });
     expect(result.success).toBe(false);
+  });
+
+  it("wraps out-of-range longitude in startPoint instead of rejecting", () => {
+    const result = routeAnalysisRequestSchema.safeParse({
+      start: "Munich",
+      end: "Berlin",
+      startPoint: { lat: 48.137, lon: 200 },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.startPoint?.lon).toBe(-160);
+    }
   });
 });
 

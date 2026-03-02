@@ -10,14 +10,12 @@ export function ConsentBanner() {
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
-  // Save the element that had focus before the banner appeared
   useEffect(() => {
     if (consent === "unset") {
       previousFocusRef.current = document.activeElement as HTMLElement | null;
     }
   }, [consent]);
 
-  // Focus trap: cycle focus within the dialog
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if (event.key !== "Tab") return;
     const dialog = dialogRef.current;
@@ -44,14 +42,12 @@ export function ConsentBanner() {
     }
   }, []);
 
-  // Set up focus trap and initial focus
   useEffect(() => {
     if (consent !== "unset") return;
 
     const dialog = dialogRef.current;
     if (!dialog) return;
 
-    // Focus the first button after mount
     const firstButton = dialog.querySelector<HTMLElement>("button");
     firstButton?.focus();
 
@@ -80,24 +76,24 @@ export function ConsentBanner() {
       aria-modal="true"
       aria-labelledby="consent-title"
       aria-describedby="consent-description"
-      className="fixed right-4 bottom-4 z-50 max-w-md rounded-xl border border-zinc-300 bg-white p-4 shadow-lg"
+      className="fixed right-4 bottom-24 z-50 max-w-sm rounded-xl border border-[var(--border-strong)] bg-surface p-4 shadow-lg sm:max-w-md"
     >
-      <p id="consent-title" className="text-sm font-medium text-zinc-900">
+      <p id="consent-title" className="text-sm font-medium text-[var(--text-primary)]">
         {t("consent.title")}
       </p>
-      <p id="consent-description" className="mt-1 text-xs text-zinc-700">
+      <p id="consent-description" className="mt-1 text-xs text-[var(--text-secondary)]">
         {t("consent.description")}
       </p>
       <div className="mt-3 flex gap-2">
         <button
           onClick={accept}
-          className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          className="rounded-md bg-[var(--accent)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--accent-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2"
         >
           {t("consent.accept")}
         </button>
         <button
           onClick={reject}
-          className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-400 focus:ring-offset-2"
+          className="rounded-md border border-[var(--border-strong)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)] hover:bg-surface-muted focus:outline-none focus:ring-2 focus:ring-[var(--border-strong)] focus:ring-offset-2"
         >
           {t("consent.reject")}
         </button>

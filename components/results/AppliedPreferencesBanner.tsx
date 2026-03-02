@@ -66,45 +66,45 @@ export function AppliedPreferencesBanner({ result }: { result: RouteAnalysisResu
   });
 
   return (
-    <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+    <section className="rounded-2xl border border-[var(--border)] bg-surface p-4 shadow-sm">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-base font-semibold text-zinc-900">Applied preferences</h3>
+        <h3 className="font-[family-name:var(--font-display)] text-base font-semibold text-[var(--text-primary)]">Applied preferences</h3>
         <button
           type="button"
           onClick={() => setExpanded((previous) => !previous)}
-          className="rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+          className="rounded-md border border-[var(--border-strong)] px-2 py-1 text-xs font-medium text-[var(--text-secondary)] hover:bg-surface-muted"
         >
           {expanded ? "Hide" : "Show"}
         </button>
       </div>
       {expanded ? <div className="mt-2 flex flex-wrap gap-2 text-sm">
-        <span className="rounded-full border border-zinc-300 bg-zinc-50 px-3 py-1 text-zinc-800">
+        <span className="rounded-full border border-[var(--border-strong)] bg-surface-muted px-3 py-1 text-[var(--text-secondary)]">
           Avoid toll roads: {preferences.avoidTolls ? "On" : "Off"}
         </span>
-        <span className="rounded-full border border-zinc-300 bg-zinc-50 px-3 py-1 text-zinc-800">
+        <span className="rounded-full border border-[var(--border-strong)] bg-surface-muted px-3 py-1 text-[var(--text-secondary)]">
           Channel crossing: {formatChannel(preferences.channelCrossingPreference)}
         </span>
-        <span className="rounded-full border border-zinc-300 bg-zinc-50 px-3 py-1 text-zinc-800">
+        <span className="rounded-full border border-[var(--border-strong)] bg-surface-muted px-3 py-1 text-[var(--text-secondary)]">
           Vehicle: {formatVehicle(preferences.vehicleClass)}
         </span>
-        <span className="rounded-full border border-zinc-300 bg-zinc-50 px-3 py-1 text-zinc-800">
+        <span className="rounded-full border border-[var(--border-strong)] bg-surface-muted px-3 py-1 text-[var(--text-secondary)]">
           Powertrain: {formatPowertrain(preferences.powertrainType)}
         </span>
         {!isMotorcycle ? (
           <>
-            <span className="rounded-full border border-zinc-300 bg-zinc-50 px-3 py-1 text-zinc-800">
+            <span className="rounded-full border border-[var(--border-strong)] bg-surface-muted px-3 py-1 text-[var(--text-secondary)]">
               Gross weight: {preferences.grossWeightKg ? `${preferences.grossWeightKg} kg` : "Not set"}
             </span>
-            <span className="rounded-full border border-zinc-300 bg-zinc-50 px-3 py-1 text-zinc-800">
+            <span className="rounded-full border border-[var(--border-strong)] bg-surface-muted px-3 py-1 text-[var(--text-secondary)]">
               Axles: {preferences.axles ?? "Not set"}
             </span>
-            <span className="rounded-full border border-zinc-300 bg-zinc-50 px-3 py-1 text-zinc-800">
+            <span className="rounded-full border border-[var(--border-strong)] bg-surface-muted px-3 py-1 text-[var(--text-secondary)]">
               Emission: {formatEmission(preferences.emissionClass)}
             </span>
           </>
         ) : null}
       </div> : (
-        <p className="mt-2 text-sm text-zinc-600">
+        <p className="mt-2 text-sm text-[var(--text-muted)]">
           {formatVehicle(preferences.vehicleClass)}, {formatPowertrain(preferences.powertrainType)}, avoid tolls:{" "}
           {preferences.avoidTolls ? "on" : "off"}.
         </p>

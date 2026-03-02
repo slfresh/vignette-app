@@ -165,10 +165,26 @@ export type TranslationKey =
   | "map.useAsStart"
   | "map.geoDenied"
   | "map.geoLoading"
+  | "map.showSpeedCameras"
+  | "map.hideSpeedCameras"
+  | "map.speedCameraPopup"
+  | "map.speedLimit"
+  | "map.showHighwayCameras"
+  | "map.hideHighwayCameras"
+  | "map.highwayCameraHint"
+  | "map.lufopAttribution"
+  | "map.showTraffic"
+  | "map.hideTraffic"
   | "mapPicker.setStart"
   | "mapPicker.setStartActive"
   | "mapPicker.setDest"
   | "mapPicker.setDestActive"
+  | "map.directionsFrom"
+  | "map.directionsTo"
+  | "map.loadingAddress"
+  | "map.tapHint"
+  | "recentSearches.title"
+  | "recentSearches.clear"
   | "cost.fuelStrategy"
   | "cost.cheapestFuel"
   | "cost.planStopsTank"
@@ -176,7 +192,14 @@ export type TranslationKey =
   | "vehicle.car"
   | "vehicle.motorcycle"
   | "vehicle.camper"
-  | "offline.message";
+  | "offline.message"
+  | "results.estimatedBudget"
+  | "results.vignettes"
+  | "results.sectionTolls"
+  | "results.fuelEstimate"
+  | "results.chargingEstimate"
+  | "results.totalDistance"
+  | "errors.tryAgain";
 
 export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>>> = {
   en: {
@@ -336,10 +359,26 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "map.useAsStart": "Use my location as start",
     "map.geoDenied": "Location access was denied",
     "map.geoLoading": "Locating you…",
+    "map.showSpeedCameras": "Show speed cameras",
+    "map.hideSpeedCameras": "Hide speed cameras",
+    "map.speedCameraPopup": "Speed camera",
+    "map.speedLimit": "Speed limit",
+    "map.showHighwayCameras": "Show highway cameras",
+    "map.hideHighwayCameras": "Hide highway cameras",
+    "map.highwayCameraHint": "Opens HAK highway camera in new tab",
+    "map.lufopAttribution": "Speed camera data by lufop.net (CC BY-SA 4.0)",
+    "map.showTraffic": "Show traffic",
+    "map.hideTraffic": "Hide traffic",
     "mapPicker.setStart": "Set Start on map",
     "mapPicker.setStartActive": "Click map for Start (A)",
     "mapPicker.setDest": "Set Destination on map",
     "mapPicker.setDestActive": "Click map for Destination (B)",
+    "map.directionsFrom": "Directions from here",
+    "map.directionsTo": "Directions to here",
+    "map.loadingAddress": "Loading address...",
+    "map.tapHint": "Tap the map to set a point",
+    "recentSearches.title": "Recent",
+    "recentSearches.clear": "Clear",
     "cost.fuelStrategy": "Fuel strategy",
     "cost.cheapestFuel": "Cheapest fuel found",
     "cost.planStopsTank": "Plan stops accordingly based on your tank range",
@@ -348,6 +387,13 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "vehicle.motorcycle": "Motorcycle",
     "vehicle.camper": "Camper van / RV",
     "offline.message": "You are offline. Route calculations require an internet connection.",
+    "results.estimatedBudget": "Estimated total budget",
+    "results.vignettes": "Vignettes",
+    "results.sectionTolls": "Section tolls",
+    "results.fuelEstimate": "Fuel estimate",
+    "results.chargingEstimate": "Charging estimate",
+    "results.totalDistance": "Total distance",
+    "errors.tryAgain": "Try again",
   },
   de: {
     "header.unofficial": "Inoffizielles Informationsportal",
@@ -506,10 +552,26 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "map.useAsStart": "Meinen Standort als Start verwenden",
     "map.geoDenied": "Standortzugriff verweigert",
     "map.geoLoading": "Standort wird ermittelt…",
+    "map.showSpeedCameras": "Blitzer anzeigen",
+    "map.hideSpeedCameras": "Blitzer ausblenden",
+    "map.speedCameraPopup": "Blitzer",
+    "map.speedLimit": "Tempolimit",
+    "map.showHighwayCameras": "Autobahnkameras anzeigen",
+    "map.hideHighwayCameras": "Autobahnkameras ausblenden",
+    "map.highwayCameraHint": "HAK-Autobahnkamera in neuem Tab öffnen",
+    "map.lufopAttribution": "Blitzerdaten von lufop.net (CC BY-SA 4.0)",
+    "map.showTraffic": "Verkehr anzeigen",
+    "map.hideTraffic": "Verkehr ausblenden",
     "mapPicker.setStart": "Start auf Karte setzen",
     "mapPicker.setStartActive": "Karte fuer Start (A) klicken",
     "mapPicker.setDest": "Ziel auf Karte setzen",
     "mapPicker.setDestActive": "Karte fuer Ziel (B) klicken",
+    "map.directionsFrom": "Route von hier",
+    "map.directionsTo": "Route hierher",
+    "map.loadingAddress": "Adresse wird geladen...",
+    "map.tapHint": "Tippen Sie auf die Karte, um einen Punkt zu setzen",
+    "recentSearches.title": "Zuletzt gesucht",
+    "recentSearches.clear": "Löschen",
     "cost.fuelStrategy": "Tankstrategie",
     "cost.cheapestFuel": "Guenstigster Kraftstoff gefunden",
     "cost.planStopsTank": "Stopps je nach Tankreichweite planen",
@@ -518,6 +580,13 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "vehicle.motorcycle": "Motorrad",
     "vehicle.camper": "Camper / Wohnmobil",
     "offline.message": "Sie sind offline. Routenberechnungen erfordern eine Internetverbindung.",
+    "results.estimatedBudget": "Geschätztes Gesamtbudget",
+    "results.vignettes": "Vignetten",
+    "results.sectionTolls": "Streckenmaut",
+    "results.fuelEstimate": "Kraftstoffkosten",
+    "results.chargingEstimate": "Ladekosten",
+    "results.totalDistance": "Gesamtstrecke",
+    "errors.tryAgain": "Erneut versuchen",
   },
   tr: {
     "header.unofficial": "Resmi olmayan bilgi portali",
@@ -676,10 +745,26 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "map.useAsStart": "Konumumu baslangic olarak kullan",
     "map.geoDenied": "Konum erisimi reddedildi",
     "map.geoLoading": "Konumunuz belirleniyor…",
+    "map.showSpeedCameras": "Hız kameralarını göster",
+    "map.hideSpeedCameras": "Hız kameralarını gizle",
+    "map.speedCameraPopup": "Hız kamerası",
+    "map.speedLimit": "Hız sınırı",
+    "map.showHighwayCameras": "Otoyol kameralarını göster",
+    "map.hideHighwayCameras": "Otoyol kameralarını gizle",
+    "map.highwayCameraHint": "HAK otoyol kamerasını yeni sekmede aç",
+    "map.lufopAttribution": "Hız kamerası verileri lufop.net (CC BY-SA 4.0)",
+    "map.showTraffic": "Trafiği göster",
+    "map.hideTraffic": "Trafiği gizle",
     "mapPicker.setStart": "Haritada baslangic sec",
     "mapPicker.setStartActive": "Baslangic icin haritaya tikla (A)",
     "mapPicker.setDest": "Haritada varis sec",
     "mapPicker.setDestActive": "Varis icin haritaya tikla (B)",
+    "map.directionsFrom": "Buradan yol tarifi",
+    "map.directionsTo": "Buraya yol tarifi",
+    "map.loadingAddress": "Adres yukleniyor...",
+    "map.tapHint": "Bir nokta belirlemek icin haritaya dokunun",
+    "recentSearches.title": "Son aramalar",
+    "recentSearches.clear": "Temizle",
     "cost.fuelStrategy": "Yakit stratejisi",
     "cost.cheapestFuel": "En ucuz yakit bulundu",
     "cost.planStopsTank": "Depo menzilinize gore durak planlayin",
@@ -688,6 +773,13 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "vehicle.motorcycle": "Motosiklet",
     "vehicle.camper": "Karavan / RV",
     "offline.message": "Cevrimdisi durumdasiniz. Rota hesaplamalari internet baglantisi gerektirir.",
+    "results.estimatedBudget": "Tahmini toplam bütçe",
+    "results.vignettes": "Vinyet",
+    "results.sectionTolls": "Bölüm geçiş ücreti",
+    "results.fuelEstimate": "Yakıt tahmini",
+    "results.chargingEstimate": "Şarj tahmini",
+    "results.totalDistance": "Toplam mesafe",
+    "errors.tryAgain": "Tekrar dene",
   },
   pl: {
     "header.unofficial": "Niezalezny portal informacyjny",
@@ -846,10 +938,26 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "map.useAsStart": "Uzyj mojej lokalizacji jako startu",
     "map.geoDenied": "Odmowiono dostepu do lokalizacji",
     "map.geoLoading": "Okreslanie lokalizacji…",
+    "map.showSpeedCameras": "Pokaż fotoradary",
+    "map.hideSpeedCameras": "Ukryj fotoradary",
+    "map.speedCameraPopup": "Fotoradar",
+    "map.speedLimit": "Ograniczenie prędkości",
+    "map.showHighwayCameras": "Pokaż kamery autostradowe",
+    "map.hideHighwayCameras": "Ukryj kamery autostradowe",
+    "map.highwayCameraHint": "Otwiera kamerę HAK w nowej karcie",
+    "map.lufopAttribution": "Dane fotoradarów: lufop.net (CC BY-SA 4.0)",
+    "map.showTraffic": "Pokaż ruch",
+    "map.hideTraffic": "Ukryj ruch",
     "mapPicker.setStart": "Ustaw start na mapie",
     "mapPicker.setStartActive": "Kliknij mape dla startu (A)",
     "mapPicker.setDest": "Ustaw cel na mapie",
     "mapPicker.setDestActive": "Kliknij mape dla celu (B)",
+    "map.directionsFrom": "Trasa stąd",
+    "map.directionsTo": "Trasa tutaj",
+    "map.loadingAddress": "Ładowanie adresu...",
+    "map.tapHint": "Kliknij na mapę, aby ustawić punkt",
+    "recentSearches.title": "Ostatnie",
+    "recentSearches.clear": "Wyczyść",
     "cost.fuelStrategy": "Strategia paliwowa",
     "cost.cheapestFuel": "Znaleziono najtansze paliwo",
     "cost.planStopsTank": "Zaplanuj postoje wedlug zasiegu baku",
@@ -858,6 +966,13 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "vehicle.motorcycle": "Motocykl",
     "vehicle.camper": "Kamper / RV",
     "offline.message": "Jestes offline. Obliczanie trasy wymaga polaczenia z internetem.",
+    "results.estimatedBudget": "Szacowany całkowity budżet",
+    "results.vignettes": "Winiety",
+    "results.sectionTolls": "Opłaty odcinkowe",
+    "results.fuelEstimate": "Koszt paliwa",
+    "results.chargingEstimate": "Koszt ładowania",
+    "results.totalDistance": "Całkowita odległość",
+    "errors.tryAgain": "Spróbuj ponownie",
   },
   ro: {
     "header.unofficial": "Portal informativ neoficial",
@@ -1016,10 +1131,26 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "map.useAsStart": "Foloseste locatia mea ca punct de pornire",
     "map.geoDenied": "Accesul la locatie a fost refuzat",
     "map.geoLoading": "Se determina locatia…",
+    "map.showSpeedCameras": "Arată radarele fixe",
+    "map.hideSpeedCameras": "Ascunde radarele fixe",
+    "map.speedCameraPopup": "Radar fix",
+    "map.speedLimit": "Limita de viteză",
+    "map.showHighwayCameras": "Arată camerele de autostradă",
+    "map.hideHighwayCameras": "Ascunde camerele de autostradă",
+    "map.highwayCameraHint": "Deschide camera HAK în tab nou",
+    "map.lufopAttribution": "Date radare de la lufop.net (CC BY-SA 4.0)",
+    "map.showTraffic": "Arată traficul",
+    "map.hideTraffic": "Ascunde traficul",
     "mapPicker.setStart": "Seteaza pornirea pe harta",
     "mapPicker.setStartActive": "Click pe harta pentru pornire (A)",
     "mapPicker.setDest": "Seteaza destinatia pe harta",
     "mapPicker.setDestActive": "Click pe harta pentru destinatie (B)",
+    "map.directionsFrom": "Indicatii de aici",
+    "map.directionsTo": "Indicatii spre aici",
+    "map.loadingAddress": "Se incarca adresa...",
+    "map.tapHint": "Apasati pe harta pentru a seta un punct",
+    "recentSearches.title": "Recente",
+    "recentSearches.clear": "Sterge",
     "cost.fuelStrategy": "Strategie combustibil",
     "cost.cheapestFuel": "Cel mai ieftin combustibil gasit",
     "cost.planStopsTank": "Planifica opririle in functie de autonomia rezervorului",
@@ -1028,5 +1159,12 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "vehicle.motorcycle": "Motocicleta",
     "vehicle.camper": "Autorulota / RV",
     "offline.message": "Sunteti offline. Calculul rutei necesita conexiune la internet.",
+    "results.estimatedBudget": "Buget total estimat",
+    "results.vignettes": "Viniete",
+    "results.sectionTolls": "Taxe de secțiune",
+    "results.fuelEstimate": "Estimare combustibil",
+    "results.chargingEstimate": "Estimare încărcare",
+    "results.totalDistance": "Distanța totală",
+    "errors.tryAgain": "Încearcă din nou",
   },
 };

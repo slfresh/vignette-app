@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { checkRateLimit } from "@/lib/security/rateLimit";
 import { logger } from "@/lib/logging/logger";
+import { wrapLongitude } from "@/lib/geocoding/geocode";
 
 const PHOTON_REVERSE_URL = "https://photon.komoot.io/reverse";
 const GEOCODE_TIMEOUT_MS = 8_000;
@@ -50,12 +51,14 @@ export async function GET(request: Request) {
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
     return NextResponse.json({ error: "Invalid lat/lon" }, { status: 400 });
   }
-  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
-    return NextResponse.json({ error: "Lat/lon out of range" }, { status: 400 });
+  if (lat < -90 || lat > 90) {
+    return NextResponse.json({ error: "Latitude out of range" }, { status: 400 });
   }
 
+  const wrappedLon = wrapLongitude(lon);
+
   try {
-    const url = `${PHOTON_REVERSE_URL}?lat=${lat}&lon=${lon}`;
+    const url = `${PHOTON_REVERSE_URL}?lat=${lat}&lon=${wrappedLon}`;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), GEOCODE_TIMEOUT_MS);
     const response = await fetch(url, { cache: "no-store", signal: controller.signal }).finally(() => clearTimeout(timeoutId));

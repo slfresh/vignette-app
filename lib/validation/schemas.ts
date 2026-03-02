@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wrapLongitude } from "@/lib/geocoding/geocode";
 
 /**
  * Valid vehicle class identifiers used across European vignette systems.
@@ -45,8 +46,7 @@ export const routePointSchema = z.object({
   lon: z
     .number()
     .finite("Longitude must be a finite number.")
-    .min(-180, "Longitude must be between -180 and 180.")
-    .max(180, "Longitude must be between -180 and 180."),
+    .transform(wrapLongitude),
 });
 
 /**

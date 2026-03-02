@@ -1,35 +1,39 @@
 @import "tailwindcss";
 
-/*
- * Configure Tailwind dark: variant to use .theme-dark class.
- * Components can now use dark:bg-gray-900, dark:text-white etc.
- * directly in JSX instead of adding CSS overrides here.
- */
 @custom-variant dark (&:where(.theme-dark, .theme-dark *));
 
-/* ─── Semantic color tokens ─── */
+/* ─── Warm "Refined European Atlas" color tokens ─── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --surface: #ffffff;
-  --surface-muted: #f4f4f5;
-  --border: #e4e4e7;
-  --border-strong: #d4d4d8;
-  --text-primary: #18181b;
-  --text-secondary: #3f3f46;
-  --text-muted: #71717a;
+  --background: #F5F0E8;
+  --foreground: #1C1C1E;
+  --surface: #FFFFFF;
+  --surface-muted: #EDE7D9;
+  --border: #D6D0C4;
+  --border-strong: #B8B0A0;
+  --text-primary: #1C1C1E;
+  --text-secondary: #3D3D3F;
+  --text-muted: #7A7A7D;
+  --accent: #D4820A;
+  --accent-hover: #B8710A;
+  --accent-green: #2E7D52;
+  --accent-red: #C0392B;
 }
 
+/* ─── Warm dark palette ─── */
 html.theme-dark {
-  --background: #0b1220;
-  --foreground: #e5e7eb;
-  --surface: #111827;
-  --surface-muted: #0f172a;
-  --border: #374151;
-  --border-strong: #374151;
-  --text-primary: #e5e7eb;
-  --text-secondary: #e5e7eb;
-  --text-muted: #9ca3af;
+  --background: #1A1814;
+  --foreground: #EDE7D9;
+  --surface: #242019;
+  --surface-muted: #2E2A22;
+  --border: #3D382F;
+  --border-strong: #4A4439;
+  --text-primary: #EDE7D9;
+  --text-secondary: #C4BEB3;
+  --text-muted: #8A847A;
+  --accent: #E89B1C;
+  --accent-hover: #D4880F;
+  --accent-green: #3DAA6A;
+  --accent-red: #D95045;
 }
 
 @theme inline {
@@ -38,14 +42,19 @@ html.theme-dark {
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
   --color-border-theme: var(--border);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-green: var(--accent-green);
+  --color-accent-red: var(--accent-red);
+  --font-display: var(--font-display);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
 }
 
 body {
   background: var(--background);
   color: var(--text-primary);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), "DM Sans", system-ui, sans-serif;
 }
 
 a {
@@ -54,147 +63,54 @@ a {
 
 code {
   border-radius: 4px;
-  background: #eef2ff;
+  background: var(--surface-muted);
   padding: 0.1rem 0.3rem;
-}
-
-/*
- * Dark mode overrides for Tailwind utility classes.
- *
- * These exist for backwards compatibility -- components that don't yet use
- * dark: variants or CSS variables still get themed correctly.
- *
- * Migration path: replace these one-by-one by adding dark: classes directly
- * in component JSX (e.g. bg-white dark:bg-gray-900) and then removing the
- * override here.
- */
-html.theme-dark .bg-white {
-  background-color: #111827 !important;
-}
-
-html.theme-dark .bg-zinc-50 {
-  background-color: #0f172a !important;
-}
-
-html.theme-dark .bg-orange-50 {
-  background-color: #1f2937 !important;
-}
-
-html.theme-dark .bg-red-50 {
-  background-color: #2a1a1a !important;
-}
-
-html.theme-dark .bg-sky-50 {
-  background-color: #10283a !important;
-}
-
-html.theme-dark .bg-emerald-50 {
-  background-color: #0d2818 !important;
-}
-
-html.theme-dark .bg-emerald-100 {
-  background-color: #132f1e !important;
-}
-
-html.theme-dark .bg-amber-50 {
-  background-color: #1c1708 !important;
-}
-
-html.theme-dark .bg-amber-100 {
-  background-color: #292211 !important;
-}
-
-html.theme-dark .bg-red-100 {
-  background-color: #2a1515 !important;
-}
-
-html.theme-dark .border-zinc-200,
-html.theme-dark .border-zinc-300 {
-  border-color: var(--border) !important;
-}
-
-html.theme-dark .border-sky-200,
-html.theme-dark .border-sky-300 {
-  border-color: #1f4a66 !important;
-}
-
-html.theme-dark .border-orange-200 {
-  border-color: #5b4020 !important;
-}
-
-html.theme-dark .border-red-200 {
-  border-color: #5b2828 !important;
-}
-
-html.theme-dark .border-emerald-200 {
-  border-color: #2d5b45 !important;
-}
-
-html.theme-dark .border-amber-200 {
-  border-color: #78631d !important;
-}
-
-html.theme-dark .text-zinc-900,
-html.theme-dark .text-zinc-800,
-html.theme-dark .text-zinc-700 {
-  color: var(--text-primary) !important;
-}
-
-html.theme-dark .text-zinc-600,
-html.theme-dark .text-zinc-500 {
-  color: var(--text-muted) !important;
-}
-
-html.theme-dark .text-blue-700 {
-  color: #93c5fd !important;
-}
-
-html.theme-dark .text-emerald-700,
-html.theme-dark .text-emerald-900 {
-  color: #6ee7b7 !important;
-}
-
-html.theme-dark .text-emerald-800 {
-  color: #a7f3d0 !important;
-}
-
-html.theme-dark .text-red-700,
-html.theme-dark .text-red-800 {
-  color: #fca5a5 !important;
-}
-
-html.theme-dark .text-amber-800 {
-  color: #fcd34d !important;
-}
-
-html.theme-dark .text-amber-900 {
-  color: #fde68a !important;
-}
-
-html.theme-dark .text-orange-900,
-html.theme-dark .text-sky-900,
-html.theme-dark .text-sky-950 {
-  color: #dbeafe !important;
-}
-
-html.theme-dark code {
-  background: #1f2937;
+  font-family: var(--font-mono), "DM Mono", monospace;
 }
 
 /* ─── Leaflet popup ─── */
 .leaflet-popup-content-wrapper {
-  background: #fff;
-  color: #18181b;
+  background: var(--surface);
+  color: var(--text-primary);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
 }
 html.theme-dark .leaflet-popup-content-wrapper {
-  background: #1e293b;
-  color: #e5e7eb;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
 }
-html.theme-dark .leaflet-popup-tip {
-  background: #1e293b;
+.leaflet-popup-tip {
+  background: var(--surface);
 }
 .leaflet-popup-content {
   margin: 12px 16px;
+  font-family: var(--font-sans), "DM Sans", system-ui, sans-serif;
+}
+
+/* Mobile bottom sheet: strip form's decorative styling since the sheet provides it */
+@media (max-width: 767px) {
+  .mobile-sheet-form > form {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* Context popup (Google Maps-style click popup) */
+.context-popup button {
+  cursor: pointer;
+  border: none;
+}
+.context-pin {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* ─── Dark mode code block ─── */
+html.theme-dark code {
+  background: var(--surface-muted);
 }
 
 /* ─── Map overlay buttons (fullscreen, camera toggle) ─── */
@@ -204,47 +120,26 @@ html.theme-dark .leaflet-popup-tip {
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: 8px;
-  border: 2px solid var(--border-strong);
+  border-radius: 10px;
+  border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text-primary);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   cursor: pointer;
   z-index: 1001;
+  transition: all 0.15s ease;
 }
 .map-overlay-btn:hover {
-  opacity: 0.85;
+  background: var(--surface-muted);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 .map-overlay-btn:focus-visible {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 .map-overlay-btn--active {
-  border-color: #0ea5e9;
-  background: #e0f2fe;
-}
-html.theme-dark .map-overlay-btn--active {
-  background: #164e63;
-  border-color: #22d3ee;
-}
-
-/* ─── Fullscreen map overlay ─── */
-html.theme-dark .map-fullscreen {
-  background-color: #0f172a !important;
-}
-html.theme-dark .map-fullscreen-header {
-  background-color: #1e293b !important;
-  border-color: #334155 !important;
-  color: #e2e8f0 !important;
-}
-html.theme-dark .map-fullscreen-header button {
-  background-color: #334155 !important;
-  border-color: #475569 !important;
-  color: #e2e8f0 !important;
-}
-html.theme-dark .map-fullscreen-header button:hover {
-  background-color: #475569 !important;
-  border-color: #64748b !important;
+  border-color: var(--accent);
+  background: #FDF6EC;
 }
 
 /* ─── Screen-reader only utility ─── */
@@ -260,7 +155,7 @@ html.theme-dark .map-fullscreen-header button:hover {
   border-width: 0;
 }
 
-/* ─── Camera icon (dark-mode aware) ─── */
+/* ─── Camera icon circles ─── */
 .camera-icon-circle {
   display: flex;
   align-items: center;
@@ -268,23 +163,84 @@ html.theme-dark .map-fullscreen-header button:hover {
   width: 36px;
   height: 36px;
   border-radius: 9999px;
-  background: #e0f2fe;
-  border: 2px solid #0ea5e9;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-html.theme-dark .camera-icon-circle {
-  background: #164e63;
-  border-color: #22d3ee;
+  background: #FDF6EC;
+  border: 2px solid var(--accent);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
 }
 
-/* ─── Mobile safe area for fixed bottom elements ─── */
+.radar-icon-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  background: #FEF2F2;
+  border: 2px solid var(--accent-red);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+}
+.speed-camera-pin {
+  background: none !important;
+  border: none !important;
+}
+
+.highway-cam-icon-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  background: #FFFBEB;
+  border: 2px solid #F59E0B;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+}
+.highway-camera-pin {
+  background: none !important;
+  border: none !important;
+}
+
+/* ─── Chat Markdown prose ─── */
+.chat-markdown p {
+  margin: 0.25em 0;
+}
+.chat-markdown ul, .chat-markdown ol {
+  margin: 0.25em 0;
+  padding-left: 1.25em;
+}
+.chat-markdown li {
+  margin: 0.1em 0;
+}
+.chat-markdown h1, .chat-markdown h2, .chat-markdown h3 {
+  font-size: 0.95em;
+  font-weight: 700;
+  margin: 0.5em 0 0.25em;
+}
+.chat-markdown a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.chat-markdown code {
+  font-size: 0.85em;
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  background: rgba(0,0,0,0.05);
+}
+.chat-markdown pre {
+  margin: 0.5em 0;
+  padding: 0.5em;
+  border-radius: 6px;
+  background: rgba(0,0,0,0.03);
+  overflow-x: auto;
+}
+
+/* ─── Mobile safe area ─── */
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* ─── Geolocation blue dot with pulse animation ─── */
+/* ─── Geolocation blue dot ─── */
 .geo-dot-wrapper {
-  /* Override leaflet default icon styling */
   background: none !important;
   border: none !important;
 }
@@ -292,19 +248,65 @@ html.theme-dark .camera-icon-circle {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #3b82f6;
+  background: var(--accent);
   border: 3px solid #fff;
-  box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 0 0 rgba(212, 130, 10, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
   animation: geo-pulse 2s ease-out infinite;
 }
 @keyframes geo-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 0 0 rgba(212, 130, 10, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
   }
   70% {
-    box-shadow: 0 0 0 18px rgba(59, 130, 246, 0), 0 2px 6px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 0 18px rgba(212, 130, 10, 0), 0 2px 6px rgba(0, 0, 0, 0.3);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0), 0 2px 6px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 0 0 rgba(212, 130, 10, 0), 0 2px 6px rgba(0, 0, 0, 0.3);
   }
+}
+
+/* ─── Fullscreen map overlay ─── */
+.map-fullscreen {
+  background-color: var(--background);
+}
+.map-fullscreen-header {
+  background-color: var(--surface);
+  border-color: var(--border);
+  color: var(--text-primary);
+}
+
+/* ─── Smooth card hover transitions ─── */
+article,
+section > div {
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+/* ─── Fade-in animation for results appearing ─── */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in-up {
+  animation: fade-in-up 0.35s ease-out both;
+}
+
+/* ─── Shimmer animation for skeletons ─── */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+.animate-shimmer {
+  background: linear-gradient(90deg, var(--border) 25%, var(--surface-muted) 50%, var(--border) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
 }

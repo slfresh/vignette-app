@@ -83,7 +83,7 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={toggleTheme}
-      className="inline-flex items-center gap-1 rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+      className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] bg-surface px-2 py-1 text-xs font-medium text-[var(--text-secondary)] hover:bg-surface-muted"
       aria-label={switchLabel}
       title={switchLabel}
     >

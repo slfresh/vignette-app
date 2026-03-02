@@ -21,6 +21,15 @@ const envSchema = z.object({
 
   /** Contact email for Nominatim User-Agent header – optional */
   APP_CONTACT_EMAIL: z.string().email().optional(),
+
+  /** Lufop API key for European speed camera data – optional */
+  LUFOP_API_KEY: z.string().optional(),
+
+  /** LM Studio URL for local AI features – optional */
+  LM_STUDIO_URL: z.string().url().optional(),
+
+  /** TomTom API key for real-time traffic layer – optional */
+  TOMTOM_API_KEY: z.string().optional(),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;

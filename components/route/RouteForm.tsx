@@ -5,6 +5,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "re
 import { useI18n } from "@/components/i18n/I18nProvider";
 import type { TranslationKey } from "@/lib/i18n/translations";
 import type { EmissionClass, PowertrainType, RoutePoint, VehicleClass } from "@/types/vignette";
+import { getRecentSearches, addRecentSearch, clearRecentSearches, type RecentSearch } from "@/lib/storage/recentSearches";
 
 interface GeocodeSuggestion {
   label: string;
@@ -63,6 +64,8 @@ interface RouteFormProps {
 export type RouteFormHandle = {
   setStartFromMap: (label: string, point: RoutePoint) => void;
   setEndFromMap: (label: string, point: RoutePoint) => void;
+  /** Programmatically submit the form (used by auto-calculate). */
+  submit: () => void;
 };
 
 export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function RouteForm(
@@ -91,6 +94,10 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const lastSubmitTimeRef = useRef<number>(0);
+  const formElRef = useRef<HTMLFormElement>(null);
+  const [startFocused, setStartFocused] = useState(false);
+  const [endFocused, setEndFocused] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
   const isMotorcycle = vehicleType === "motorcycle";
   const startNeedsApproximateMatchWarning =
     start.trim().length >= 3 && extractHouseNumber(start) && startSuggestions.length > 0 && !hasExactHouseNumberMatch(start, startSuggestions);
@@ -112,6 +119,8 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
     setStartPoint({ lat: suggestion.lat, lon: suggestion.lon });
     setStartSuggestions([]);
     setActiveStartSuggestionIndex(-1);
+    addRecentSearch({ label: suggestion.label, lat: suggestion.lat, lon: suggestion.lon });
+    setRecentSearches(getRecentSearches());
   }
 
   function applyEndSuggestion(suggestion: GeocodeSuggestion) {
@@ -119,6 +128,8 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
     setEndPoint({ lat: suggestion.lat, lon: suggestion.lon });
     setEndSuggestions([]);
     setActiveEndSuggestionIndex(-1);
+    addRecentSearch({ label: suggestion.label, lat: suggestion.lat, lon: suggestion.lon });
+    setRecentSearches(getRecentSearches());
   }
 
   // Load vehicle and powertrain preferences from localStorage
@@ -147,16 +158,28 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
     }
   }, [vehicleType, powertrainType]);
 
+  // Load recent searches on mount
+  useEffect(() => {
+    setRecentSearches(getRecentSearches());
+  }, []);
+
   useImperativeHandle(ref, () => ({
     setStartFromMap: (label: string, point: RoutePoint) => {
       setStart(label);
       setStartPoint(point);
       setStartSuggestions([]);
+      addRecentSearch({ label, lat: point.lat, lon: point.lon });
+      setRecentSearches(getRecentSearches());
     },
     setEndFromMap: (label: string, point: RoutePoint) => {
       setEnd(label);
       setEndPoint(point);
       setEndSuggestions([]);
+      addRecentSearch({ label, lat: point.lat, lon: point.lon });
+      setRecentSearches(getRecentSearches());
+    },
+    submit: () => {
+      formElRef.current?.requestSubmit();
     },
   }));
 
@@ -304,35 +327,41 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
     { value: "camper", emoji: "\uD83D\uDE90", labelKey: "form.vehicle.camper", meta: `${axles}+ \u2022 EURO 6`, icon: Truck },
   ];
 
+  const inputClasses = "w-full rounded-lg border border-[var(--border)] bg-surface py-2.5 pl-10 pr-3 text-sm transition-colors placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20";
+  const selectClasses = "rounded-lg border border-[var(--border)] bg-surface px-3 py-2.5 text-sm transition-colors focus:border-[var(--accent)] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20";
+  const advancedInputClasses = "rounded-lg border border-[var(--border)] bg-white px-3 py-2.5 text-sm focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20";
+
   return (
-    <form onSubmit={handleSubmit} className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-lg">
-      {/* Gradient Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5">
-        <h2 className="flex items-center gap-2 text-lg font-bold text-white">
-          <Send className="h-5 w-5" />
+    <form ref={formElRef} onSubmit={handleSubmit} className="overflow-hidden rounded-2xl border border-[var(--border)] bg-surface shadow-lg backdrop-blur-sm lg:bg-surface/95">
+      {/* Warm header */}
+      <div className="border-b border-[var(--border)] bg-surface-muted px-5 py-4">
+        <h2 className="flex items-center gap-2 font-[family-name:var(--font-display)] text-lg font-bold text-[var(--text-primary)]">
+          <Send className="h-4 w-4 text-[var(--accent)]" />
           {t("form.title")}
         </h2>
-        <p className="mt-1 text-sm text-blue-100">{t("form.subtitle")}</p>
+        <p className="mt-0.5 text-xs text-[var(--text-muted)]">{t("form.subtitle")}</p>
       </div>
 
-      <div className="grid gap-5 p-6">
+      <div className="grid gap-5 p-5">
         {/* ─── Origin ─── */}
         <div className="relative grid gap-1.5 text-sm">
-          <span className="flex items-center gap-2 font-semibold text-zinc-800">
-            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-white" aria-hidden>A</span>
+          <span className="flex items-center gap-2 font-semibold text-[var(--text-primary)]">
+            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent-green)] text-[10px] font-bold text-white" aria-hidden>A</span>
             {t("form.start")}
           </span>
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
             <input
               role="combobox"
               aria-expanded={startSuggestions.length > 0}
               aria-controls="start-listbox"
               aria-activedescendant={activeStartSuggestionIndex >= 0 ? `start-option-${activeStartSuggestionIndex}` : undefined}
               aria-autocomplete="list"
-              className="w-full rounded-lg border border-zinc-300 bg-zinc-50 py-2.5 pl-10 pr-3 text-sm transition-colors placeholder:text-zinc-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              className={inputClasses}
               placeholder={t("form.startPlaceholder")}
               value={start}
+              onFocus={() => setStartFocused(true)}
+              onBlur={() => setTimeout(() => setStartFocused(false), 150)}
               onChange={(event) => {
                 setStart(event.target.value);
                 setStartPoint(undefined);
@@ -364,7 +393,7 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
             />
           </div>
           {startSuggestions.length ? (
-            <div id="start-listbox" role="listbox" className="absolute left-0 right-0 top-[100%] z-20 mt-1 max-h-52 overflow-auto rounded-lg border border-zinc-200 bg-white shadow-lg">
+            <div id="start-listbox" role="listbox" className="absolute left-0 right-0 top-[100%] z-20 mt-1 max-h-52 overflow-auto rounded-lg border border-[var(--border)] bg-surface shadow-lg">
               {startSuggestions.map((suggestion, index) => (
                 <button
                   id={`start-option-${index}`}
@@ -372,8 +401,8 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
                   type="button"
                   role="option"
                   aria-selected={index === activeStartSuggestionIndex}
-                  className={`block w-full px-4 py-2.5 text-left text-sm text-zinc-800 transition-colors hover:bg-blue-50 ${
-                    index === activeStartSuggestionIndex ? "bg-blue-50 text-blue-700" : ""
+                  className={`block w-full px-4 py-2.5 text-left text-sm text-[var(--text-primary)] transition-colors hover:bg-surface-muted ${
+                    index === activeStartSuggestionIndex ? "bg-surface-muted text-[var(--accent)]" : ""
                   }`}
                   onMouseEnter={() => setActiveStartSuggestionIndex(index)}
                   onMouseDown={(event) => {
@@ -383,15 +412,50 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
                 >
                   {suggestion.label}
                   {getLocalizedNameHint(start, suggestion.label) ? (
-                    <span className="ml-2 text-xs text-zinc-500">({getLocalizedNameHint(start, suggestion.label)})</span>
+                    <span className="ml-2 text-xs text-[var(--text-muted)]">({getLocalizedNameHint(start, suggestion.label)})</span>
                   ) : null}
                 </button>
               ))}
             </div>
           ) : null}
-          {startPoint ? <p className="text-xs font-medium text-emerald-600">{t("form.selectedAddressLocked")}</p> : null}
+          {/* Recent searches: shown when input focused, empty, and no autocomplete results */}
+          {startFocused && !startSuggestions.length && !startPoint && start.trim().length < 2 && recentSearches.length > 0 ? (
+            <div className="absolute left-0 right-0 top-[100%] z-20 mt-1 overflow-auto rounded-lg border border-[var(--border)] bg-surface shadow-lg">
+              <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-2">
+                <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  {t("recentSearches.title")}
+                </span>
+                <button
+                  type="button"
+                  className="text-xs font-medium text-[var(--accent)] hover:underline"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    clearRecentSearches();
+                    setRecentSearches([]);
+                  }}
+                >
+                  {t("recentSearches.clear")}
+                </button>
+              </div>
+              {recentSearches.map((item) => (
+                <button
+                  key={`recent-start-${item.label}-${item.lat}-${item.lon}`}
+                  type="button"
+                  className="block w-full px-4 py-2.5 text-left text-sm text-[var(--text-primary)] transition-colors hover:bg-surface-muted"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    applyStartSuggestion({ label: item.label, lat: item.lat, lon: item.lon });
+                  }}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {startPoint ? <p className="text-xs font-medium text-[var(--accent-green)]">{t("form.selectedAddressLocked")}</p> : null}
           {startNeedsApproximateMatchWarning ? (
-            <div className="mt-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-900">
+            <div className="mt-1 rounded-lg border border-[var(--accent)]/30 bg-[#FDF6EC] px-3 py-1.5 text-xs text-[var(--text-secondary)]">
               {t("form.approxWarning")}
               <button type="button" className="ml-2 font-medium underline" onClick={() => { setStartPoint(undefined); setStartSuggestions([]); }}>
                 {t("form.useTypedAddress")}
@@ -402,21 +466,23 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
 
         {/* ─── Destination ─── */}
         <div className="relative grid gap-1.5 text-sm">
-          <span className="flex items-center gap-2 font-semibold text-zinc-800">
-            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white" aria-hidden>B</span>
+          <span className="flex items-center gap-2 font-semibold text-[var(--text-primary)]">
+            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent-red)] text-[10px] font-bold text-white" aria-hidden>B</span>
             {t("form.destination")}
           </span>
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
             <input
               role="combobox"
               aria-expanded={endSuggestions.length > 0}
               aria-controls="end-listbox"
               aria-activedescendant={activeEndSuggestionIndex >= 0 ? `end-option-${activeEndSuggestionIndex}` : undefined}
               aria-autocomplete="list"
-              className="w-full rounded-lg border border-zinc-300 bg-zinc-50 py-2.5 pl-10 pr-3 text-sm transition-colors placeholder:text-zinc-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              className={inputClasses}
               placeholder={t("form.destinationPlaceholder")}
               value={end}
+              onFocus={() => setEndFocused(true)}
+              onBlur={() => setTimeout(() => setEndFocused(false), 150)}
               onChange={(event) => {
                 setEnd(event.target.value);
                 setEndPoint(undefined);
@@ -448,7 +514,7 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
             />
           </div>
           {endSuggestions.length ? (
-            <div id="end-listbox" role="listbox" className="absolute left-0 right-0 top-[100%] z-20 mt-1 max-h-52 overflow-auto rounded-lg border border-zinc-200 bg-white shadow-lg">
+            <div id="end-listbox" role="listbox" className="absolute left-0 right-0 top-[100%] z-20 mt-1 max-h-52 overflow-auto rounded-lg border border-[var(--border)] bg-surface shadow-lg">
               {endSuggestions.map((suggestion, index) => (
                 <button
                   id={`end-option-${index}`}
@@ -456,8 +522,8 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
                   type="button"
                   role="option"
                   aria-selected={index === activeEndSuggestionIndex}
-                  className={`block w-full px-4 py-2.5 text-left text-sm text-zinc-800 transition-colors hover:bg-blue-50 ${
-                    index === activeEndSuggestionIndex ? "bg-blue-50 text-blue-700" : ""
+                  className={`block w-full px-4 py-2.5 text-left text-sm text-[var(--text-primary)] transition-colors hover:bg-surface-muted ${
+                    index === activeEndSuggestionIndex ? "bg-surface-muted text-[var(--accent)]" : ""
                   }`}
                   onMouseEnter={() => setActiveEndSuggestionIndex(index)}
                   onMouseDown={(event) => {
@@ -467,15 +533,50 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
                 >
                   {suggestion.label}
                   {getLocalizedNameHint(end, suggestion.label) ? (
-                    <span className="ml-2 text-xs text-zinc-500">({getLocalizedNameHint(end, suggestion.label)})</span>
+                    <span className="ml-2 text-xs text-[var(--text-muted)]">({getLocalizedNameHint(end, suggestion.label)})</span>
                   ) : null}
                 </button>
               ))}
             </div>
           ) : null}
-          {endPoint ? <p className="text-xs font-medium text-emerald-600">{t("form.selectedAddressLocked")}</p> : null}
+          {/* Recent searches: shown when input focused, empty, and no autocomplete results */}
+          {endFocused && !endSuggestions.length && !endPoint && end.trim().length < 2 && recentSearches.length > 0 ? (
+            <div className="absolute left-0 right-0 top-[100%] z-20 mt-1 overflow-auto rounded-lg border border-[var(--border)] bg-surface shadow-lg">
+              <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-2">
+                <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  {t("recentSearches.title")}
+                </span>
+                <button
+                  type="button"
+                  className="text-xs font-medium text-[var(--accent)] hover:underline"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    clearRecentSearches();
+                    setRecentSearches([]);
+                  }}
+                >
+                  {t("recentSearches.clear")}
+                </button>
+              </div>
+              {recentSearches.map((item) => (
+                <button
+                  key={`recent-end-${item.label}-${item.lat}-${item.lon}`}
+                  type="button"
+                  className="block w-full px-4 py-2.5 text-left text-sm text-[var(--text-primary)] transition-colors hover:bg-surface-muted"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    applyEndSuggestion({ label: item.label, lat: item.lat, lon: item.lon });
+                  }}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {endPoint ? <p className="text-xs font-medium text-[var(--accent-green)]">{t("form.selectedAddressLocked")}</p> : null}
           {endNeedsApproximateMatchWarning ? (
-            <div className="mt-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-900">
+            <div className="mt-1 rounded-lg border border-[var(--accent)]/30 bg-[#FDF6EC] px-3 py-1.5 text-xs text-[var(--text-secondary)]">
               {t("form.approxWarning")}
               <button type="button" className="ml-2 font-medium underline" onClick={() => { setEndPoint(undefined); setEndSuggestions([]); }}>
                 {t("form.useTypedAddress")}
@@ -484,13 +585,13 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
           ) : null}
         </div>
 
-        {/* ─── Vehicle Type – 2-column card grid ─── */}
+        {/* ─── Vehicle Type ─── */}
         <fieldset className="grid gap-2">
-          <legend className="flex items-center gap-2 text-sm font-semibold text-zinc-800">
-            <Car className="h-4 w-4 text-blue-600" />
+          <legend className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
+            <Car className="h-4 w-4 text-[var(--accent)]" />
             {t("form.vehicleType")}
           </legend>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-3 gap-2">
             {vehicleCards.map(({ value, emoji, labelKey, meta }) => (
               <button
                 key={value}
@@ -498,13 +599,13 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
                 onClick={() => setVehicleType(value)}
                 className={`flex flex-col items-center gap-1 rounded-xl border-2 px-3 py-4 text-sm font-medium transition-all ${
                   vehicleType === value
-                    ? "border-blue-500 bg-blue-50/80 text-blue-700 shadow-sm"
-                    : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50 hover:shadow-sm"
+                    ? "border-[var(--accent)] bg-[#FDF6EC] text-[var(--accent)] shadow-sm"
+                    : "border-[var(--border)] bg-surface text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:bg-surface-muted hover:shadow-sm"
                 }`}
               >
                 <span className="text-2xl leading-none" role="img">{emoji}</span>
                 <span className="font-semibold">{t(labelKey)}</span>
-                <span className="text-[11px] text-zinc-500">{meta}</span>
+                <span className="text-[11px] text-[var(--text-muted)]">{meta}</span>
               </button>
             ))}
           </div>
@@ -512,9 +613,9 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
 
         {/* ─── Powertrain ─── */}
         <label className="grid gap-1.5 text-sm">
-          <span className="font-semibold text-zinc-800">{t("form.powertrain")}</span>
+          <span className="font-semibold text-[var(--text-primary)]">{t("form.powertrain")}</span>
           <select
-            className="rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2.5 text-sm transition-colors focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            className={selectClasses}
             value={powertrainType}
             onChange={(event) => setPowertrainType(event.target.value as PowertrainType)}
           >
@@ -525,13 +626,13 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
           </select>
         </label>
 
-        {/* ─── Quick checkbox: Avoid Tolls ─── */}
-        <label className="inline-flex items-center gap-2.5 text-sm font-medium text-zinc-800">
+        {/* ─── Avoid Tolls ─── */}
+        <label className="inline-flex items-center gap-2.5 text-sm font-medium text-[var(--text-primary)]">
           <input
             type="checkbox"
             checked={avoidTolls}
             onChange={(event) => setAvoidTolls(event.target.checked)}
-            className="h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
+            className="h-4 w-4 rounded border-[var(--border)] text-[var(--accent)] accent-[var(--accent)] focus:ring-[var(--accent)]"
           />
           {t("form.avoidTolls")}
         </label>
@@ -541,35 +642,35 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
           type="button"
           onClick={() => setShowAdvanced((previous) => !previous)}
           aria-expanded={showAdvanced}
-          className="flex w-full items-center justify-between rounded-lg border border-zinc-200 bg-zinc-50/80 px-4 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100"
+          className="flex w-full items-center justify-between rounded-lg border border-[var(--border)] bg-surface-muted px-4 py-3 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--border)]/30"
         >
           <span className="flex items-center gap-2">
-            <Settings className="h-4 w-4 text-zinc-500" />
+            <Settings className="h-4 w-4 text-[var(--text-muted)]" />
             {t("form.showAdvanced")}
           </span>
-          <ChevronDown className={`h-4 w-4 text-zinc-500 transition-transform ${showAdvanced ? "rotate-180" : ""}`} />
+          <ChevronDown className={`h-4 w-4 text-[var(--text-muted)] transition-transform ${showAdvanced ? "rotate-180" : ""}`} />
         </button>
 
         {/* ─── Advanced options panel ─── */}
         {showAdvanced ? (
-          <div className="grid gap-4 rounded-xl border border-zinc-200 bg-zinc-50/60 p-5">
+          <div className="grid gap-4 rounded-xl border border-[var(--border)] bg-surface-muted/50 p-5">
             <div className={`grid gap-4 ${isMotorcycle ? "" : "sm:grid-cols-2"}`}>
               <label className="grid gap-1.5 text-sm">
-                <span className="flex items-center gap-1 font-medium text-zinc-800">
+                <span className="flex items-center gap-1 font-medium text-[var(--text-primary)]">
                   {t("form.tripDate")}
                   <details className="group relative">
-                    <summary className="flex cursor-pointer list-none items-center text-zinc-500 hover:text-zinc-700">
+                    <summary className="flex cursor-pointer list-none items-center text-[var(--text-muted)] hover:text-[var(--text-secondary)]">
                       <Info className="h-4 w-4" />
                       <span className="sr-only">{t("form.tripDateHelp")}</span>
                     </summary>
-                    <span className="absolute z-20 mt-1 w-64 rounded-lg border border-zinc-200 bg-white p-2.5 text-xs font-normal text-zinc-700 shadow-lg">
+                    <span className="absolute z-20 mt-1 w-64 rounded-lg border border-[var(--border)] bg-surface p-2.5 text-xs font-normal text-[var(--text-secondary)] shadow-lg">
                       {t("form.tripDateHelp")}
                     </span>
                   </details>
                 </span>
                 <input
                   type="date"
-                  className="rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  className={advancedInputClasses}
                   value={dateISO}
                   onChange={(event) => setDateISO(event.target.value)}
                 />
@@ -577,12 +678,12 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
 
               {!isMotorcycle ? (
                 <label className="grid gap-1.5 text-sm">
-                  <span className="font-medium text-zinc-800">{t("form.seats")}</span>
+                  <span className="font-medium text-[var(--text-primary)]">{t("form.seats")}</span>
                   <input
                     type="number"
                     min={1}
                     max={20}
-                    className="rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    className={advancedInputClasses}
                     value={seats}
                     onChange={(event) => setSeats(Number(event.target.value))}
                   />
@@ -594,12 +695,12 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
               <>
                 <div className="grid gap-4 sm:grid-cols-3">
                   <label className="grid gap-1.5 text-sm">
-                    <span className="font-medium text-zinc-800">{t("form.grossWeight")}</span>
+                    <span className="font-medium text-[var(--text-primary)]">{t("form.grossWeight")}</span>
                     <input
                       type="number"
                       min={200}
                       max={60000}
-                      className="rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                      className={advancedInputClasses}
                       placeholder={t("form.optional")}
                       value={grossWeightKgInput}
                       onChange={(event) => setGrossWeightKgInput(event.target.value)}
@@ -607,12 +708,12 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
                   </label>
 
                   <label className="grid gap-1.5 text-sm">
-                    <span className="font-medium text-zinc-800">{t("form.axles")}</span>
+                    <span className="font-medium text-[var(--text-primary)]">{t("form.axles")}</span>
                     <input
                       type="number"
                       min={1}
                       max={8}
-                      className="rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                      className={advancedInputClasses}
                       value={axles}
                       onChange={(event) => setAxles(Number(event.target.value))}
                     />
@@ -620,18 +721,18 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
 
                   {powertrainType === "ELECTRIC" ? (
                     <label className="grid gap-1.5 text-sm">
-                      <span className="font-medium text-zinc-800">{t("form.emissionClass")}</span>
+                      <span className="font-medium text-[var(--text-primary)]">{t("form.emissionClass")}</span>
                       <input
-                        className="rounded-lg border border-zinc-300 bg-zinc-100 px-3 py-2.5 text-sm text-zinc-600"
+                        className="rounded-lg border border-[var(--border)] bg-surface-muted px-3 py-2.5 text-sm text-[var(--text-muted)]"
                         value={t("form.emissionClass.auto")}
                         readOnly
                       />
                     </label>
                   ) : (
                     <label className="grid gap-1.5 text-sm">
-                      <span className="font-medium text-zinc-800">{t("form.emissionClass")}</span>
+                      <span className="font-medium text-[var(--text-primary)]">{t("form.emissionClass")}</span>
                       <select
-                        className="rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                        className={advancedInputClasses}
                         value={emissionClass}
                         onChange={(event) => setEmissionClass(event.target.value as EmissionClass)}
                       >
@@ -642,16 +743,16 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
                     </label>
                   )}
                 </div>
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-[var(--text-muted)]">
                   {t("form.profileCheck")}
                 </p>
               </>
             ) : null}
 
             <label className="grid gap-1.5 text-sm">
-              <span className="font-medium text-zinc-800">{t("form.channelCrossing")}</span>
+              <span className="font-medium text-[var(--text-primary)]">{t("form.channelCrossing")}</span>
               <select
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className={advancedInputClasses}
                 value={channelCrossingPreference}
                 onChange={(event) => setChannelCrossingPreference(event.target.value as "auto" | "ferry" | "tunnel")}
               >
@@ -665,17 +766,17 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
       </div>
 
       {error ? (
-        <div id="form-error" role="alert" className="mx-6 mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700">
+        <div id="form-error" role="alert" className="mx-5 mb-4 rounded-lg border border-[var(--accent-red)]/20 bg-[#FDF2F0] px-4 py-2.5 text-sm font-medium text-[var(--accent-red)]">
           {error}
         </div>
       ) : null}
 
-      {/* ─── Full-width Calculate Route button ─── */}
-      <div className="px-6 pb-6">
+      {/* ─── Calculate Route button ─── */}
+      <div className="px-5 pb-5">
         <button
           type="submit"
           disabled={loading || isSubmitting}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3.5 text-sm font-semibold text-white shadow-md transition-all hover:from-blue-700 hover:to-indigo-700 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--accent)] px-6 py-3.5 text-sm font-semibold text-white shadow-md transition-all hover:bg-[var(--accent-hover)] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading || isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
           {t("form.submit")}

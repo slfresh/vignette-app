@@ -9,10 +9,10 @@ export function MonetizationPanel({ estimatedSavingsEuro }: { estimatedSavingsEu
   const hasConsent = consent === "accepted";
 
   return (
-    <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-      <h3 className="text-lg font-semibold text-zinc-900">Optional extras</h3>
-      <p className="mt-1 text-sm text-zinc-700">
-        Estimated avoided reseller markup: <span className="font-semibold">{estimatedSavingsEuro.toFixed(2)} EUR</span>
+    <section className="rounded-2xl border border-[var(--border)] bg-surface p-4 shadow-sm">
+      <h3 className="font-[family-name:var(--font-display)] text-lg font-semibold text-[var(--text-primary)]">Optional extras</h3>
+      <p className="mt-1 text-sm text-[var(--text-secondary)]">
+        Estimated avoided reseller markup: <span className="font-[family-name:var(--font-mono)] font-semibold">{estimatedSavingsEuro.toFixed(2)} EUR</span>
       </p>
 
       {FEATURE_FLAGS.donationsEnabled ? (
@@ -28,19 +28,19 @@ export function MonetizationPanel({ estimatedSavingsEuro }: { estimatedSavingsEu
       ) : null}
 
       {hasConsent && FEATURE_FLAGS.insuranceAffiliateEnabled ? (
-        <div className="mt-3 rounded-md bg-zinc-50 p-3 text-sm text-zinc-700">
+        <div className="mt-3 rounded-md bg-surface-muted p-3 text-sm text-[var(--text-secondary)]">
           Sponsored: travel insurance recommendations for your route.
         </div>
       ) : null}
 
       {hasConsent && FEATURE_FLAGS.accommodationAffiliateEnabled ? (
-        <div className="mt-3 rounded-md bg-zinc-50 p-3 text-sm text-zinc-700">
+        <div className="mt-3 rounded-md bg-surface-muted p-3 text-sm text-[var(--text-secondary)]">
           Sponsored: parking-friendly accommodation suggestions.
         </div>
       ) : null}
 
       {!hasConsent ? (
-        <p className="mt-3 text-xs text-zinc-500">Affiliate modules stay disabled until consent is accepted.</p>
+        <p className="mt-3 text-xs text-[var(--text-muted)]">Affiliate modules stay disabled until consent is accepted.</p>
       ) : null}
     </section>
   );
