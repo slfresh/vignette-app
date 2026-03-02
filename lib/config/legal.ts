@@ -44,6 +44,15 @@ export function assertLegalProfileConfigured(): void {
     const missing = Object.entries(profile)
       .filter(([, value]) => value.startsWith("REPLACE_WITH_"))
       .map(([key]) => key);
+
+    if (process.env.CI) {
+      console.warn(
+        `[WARN] Legal profile has placeholder values. ` +
+        `Set the LEGAL_* environment variables before deploying. Missing: ${missing.join(", ")}`,
+      );
+      return;
+    }
+
     throw new Error(
       `[FATAL] Legal profile has placeholder values in production. ` +
       `Set the LEGAL_* environment variables. Missing: ${missing.join(", ")}`,
