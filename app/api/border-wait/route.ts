@@ -14,6 +14,8 @@ type WaitRecord = {
   sourceLabel: string;
   sourceUrl: string;
   reliability: "official" | "aggregated" | "unknown";
+  /** Structured status so the UI can show appropriate messages per crossing */
+  status: "ok" | "parse_failed" | "source_unavailable";
 };
 
 type CacheEntry = {
@@ -146,6 +148,7 @@ async function collectWaitRecords(routeCountries: CountryCode[]): Promise<WaitRe
           sourceLabel: source.label,
           sourceUrl: source.url,
           reliability: minutes === null ? "unknown" : source.kind,
+          status: minutes !== null ? "ok" : "parse_failed",
         };
         if (minutes !== null) {
           break;
@@ -161,10 +164,11 @@ async function collectWaitRecords(routeCountries: CountryCode[]): Promise<WaitRe
         crossingCode,
         crossingLabel: fallbackSource?.crossingLabel ?? crossingCode,
         minutes: null,
-        display: "Live data unavailable, open source",
+        display: "Data temporarily unavailable",
         sourceLabel: fallbackSource?.label ?? "Official source",
         sourceUrl: fallbackSource?.url ?? "#",
         reliability: "unknown",
+        status: "source_unavailable",
       };
     }
 
@@ -203,16 +207,23 @@ export async function GET(request: Request) {
     return NextResponse.json(cached.payload, { status: 200 });
   }
 
-  const waits = await collectWaitRecords(routeCountries);
-  const payload = {
-    waits,
-    updatedAt: new Date().toISOString(),
-  };
+  try {
+    const waits = await collectWaitRecords(routeCountries);
+    const payload = {
+      waits,
+      updatedAt: new Date().toISOString(),
+    };
 
-  CACHE.set(cacheKey, {
-    expiresAt: Date.now() + CACHE_TTL_MS,
-    payload,
-  });
+    CACHE.set(cacheKey, {
+      expiresAt: Date.now() + CACHE_TTL_MS,
+      payload,
+    });
 
-  return NextResponse.json(payload, { status: 200 });
+    return NextResponse.json(payload, { status: 200 });
+  } catch {
+    return NextResponse.json(
+      { waits: [], updatedAt: new Date().toISOString(), error: "Border wait data temporarily unavailable." },
+      { status: 503 },
+    );
+  }
 }

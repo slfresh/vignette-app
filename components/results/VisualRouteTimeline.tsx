@@ -1,47 +1,29 @@
 "use client";
 
 import { memo, useMemo } from "react";
+import { useI18n } from "@/components/i18n/I18nProvider";
 import { getCameraPinsForCrossings } from "@/lib/border/cameraPins";
 import { OFFICIAL_LINKS } from "@/lib/config/officialLinks";
+import { COUNTRY_NAMES } from "@/lib/config/countryNames";
+import { getFlagEmoji } from "@/lib/utils/flagEmoji";
 import type { CountryCode, RouteAnalysisResult, TripTimelineEntry } from "@/types/vignette";
 
-const FLAG_EMOJI: Record<string, string> = {
-  DE: "\u{1F1E9}\u{1F1EA}", AT: "\u{1F1E6}\u{1F1F9}", CZ: "\u{1F1E8}\u{1F1FF}", SK: "\u{1F1F8}\u{1F1F0}", HU: "\u{1F1ED}\u{1F1FA}", SI: "\u{1F1F8}\u{1F1EE}", CH: "\u{1F1E8}\u{1F1ED}", RO: "\u{1F1F7}\u{1F1F4}",
-  BG: "\u{1F1E7}\u{1F1EC}", HR: "\u{1F1ED}\u{1F1F7}", RS: "\u{1F1F7}\u{1F1F8}", DK: "\u{1F1E9}\u{1F1F0}", SE: "\u{1F1F8}\u{1F1EA}", NL: "\u{1F1F3}\u{1F1F1}", BE: "\u{1F1E7}\u{1F1EA}", FR: "\u{1F1EB}\u{1F1F7}",
-  IT: "\u{1F1EE}\u{1F1F9}", BA: "\u{1F1E7}\u{1F1E6}", ME: "\u{1F1F2}\u{1F1EA}", XK: "\u{1F1FD}\u{1F1F0}", MK: "\u{1F1F2}\u{1F1F0}", AL: "\u{1F1E6}\u{1F1F1}", PL: "\u{1F1F5}\u{1F1F1}", ES: "\u{1F1EA}\u{1F1F8}",
-  PT: "\u{1F1F5}\u{1F1F9}", GB: "\u{1F1EC}\u{1F1E7}", IE: "\u{1F1EE}\u{1F1EA}", TR: "\u{1F1F9}\u{1F1F7}", GR: "\u{1F1EC}\u{1F1F7}",
-};
-
-const COUNTRY_NAMES: Record<CountryCode, string> = {
-  DE: "Germany", AT: "Austria", CZ: "Czech Republic", SK: "Slovakia",
-  HU: "Hungary", SI: "Slovenia", CH: "Switzerland", RO: "Romania",
-  BG: "Bulgaria", HR: "Croatia", RS: "Serbia", DK: "Denmark",
-  SE: "Sweden", NL: "Netherlands", BE: "Belgium", FR: "France",
-  IT: "Italy", BA: "Bosnia & Herzegovina", ME: "Montenegro",
-  XK: "Kosovo", MK: "N. Macedonia", AL: "Albania", PL: "Poland",
-  ES: "Spain", PT: "Portugal", GB: "United Kingdom", IE: "Ireland",
-  TR: "Turkey", GR: "Greece",
-};
-
-function getStampAccent(entry: TripTimelineEntry): string {
-  if (entry.requiresVignette && entry.requiresSectionToll) return "border-[var(--accent-red)]";
-  if (entry.requiresVignette) return "border-[var(--accent)]";
-  if (entry.requiresSectionToll) return "border-[var(--accent)]";
-  return "border-[var(--accent-green)]";
+function getBadgeStyle(type: "free" | "vignette" | "toll" | "urban"): string {
+  switch (type) {
+    case "free": return "border-emerald-200 bg-emerald-50 text-emerald-800";
+    case "vignette": return "border-amber-200 bg-amber-50 text-amber-800";
+    case "toll": return "border-orange-200 bg-orange-50 text-orange-800";
+    case "urban": return "border-orange-200 bg-orange-50 text-orange-800";
+  }
 }
 
-function getStampBg(entry: TripTimelineEntry): string {
-  if (entry.requiresVignette && entry.requiresSectionToll) return "bg-[#FDF2F0]";
-  if (entry.requiresVignette) return "bg-[#FDF6EC]";
-  if (entry.requiresSectionToll) return "bg-[#FDF6EC]";
-  return "bg-[#F0FAF4]";
-}
-
-function getBadgeDot(entry: TripTimelineEntry): string {
-  if (entry.requiresVignette && entry.requiresSectionToll) return "bg-[var(--accent-red)]";
-  if (entry.requiresVignette) return "bg-[var(--accent)]";
-  if (entry.requiresSectionToll) return "bg-[var(--accent)]";
-  return "bg-[var(--accent-green)]";
+function getFlagCircleBg(code: CountryCode): string {
+  const colors: Partial<Record<CountryCode, string>> = {
+    DE: "bg-zinc-800", AT: "bg-red-700", CZ: "bg-blue-700", SK: "bg-blue-600",
+    HU: "bg-green-700", SI: "bg-blue-600", CH: "bg-red-600", RO: "bg-blue-700",
+    BG: "bg-green-700", HR: "bg-red-600", RS: "bg-blue-700",
+  };
+  return colors[code] ?? "bg-zinc-600";
 }
 
 interface VisualRouteTimelineProps {
@@ -49,6 +31,7 @@ interface VisualRouteTimelineProps {
 }
 
 export const VisualRouteTimeline = memo(function VisualRouteTimeline({ result }: VisualRouteTimelineProps) {
+  const { t } = useI18n();
   const timeline = result.tripReadiness?.timeline;
 
   const crossingLabelMap = useMemo(() => {
@@ -57,9 +40,7 @@ export const VisualRouteTimeline = memo(function VisualRouteTimeline({ result }:
     const pins = getCameraPinsForCrossings(result.borderCrossings);
     for (const pin of pins) {
       const key = `${pin.countryCodeFrom}-${pin.countryCodeTo}`;
-      if (pin.nearestCameraLabel) {
-        map.set(key, pin.nearestCameraLabel);
-      }
+      if (pin.nearestCameraLabel) map.set(key, pin.nearestCameraLabel);
     }
     return map;
   }, [result.borderCrossings]);
@@ -72,111 +53,127 @@ export const VisualRouteTimeline = memo(function VisualRouteTimeline({ result }:
     return map;
   }, [result.countries]);
 
+  const countryNotices = useMemo(() => {
+    const map = new Map<CountryCode, string[]>();
+    for (const country of result.countries) {
+      if (country.notices?.length) map.set(country.countryCode, country.notices);
+    }
+    return map;
+  }, [result.countries]);
+
   if (!timeline?.length) return null;
 
-  const totalCost = timeline.reduce((sum, e) => sum + (e.estimatedCostEur ?? 0), 0);
-
   return (
-    <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-surface shadow-sm">
-      <div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-4">
-        <h3 className="flex items-center gap-2 font-[family-name:var(--font-display)] text-base font-semibold text-[var(--text-primary)]">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--accent)]">
-            <circle cx="12" cy="5" r="1" /><path d="m9 20 3-6 3 6" /><path d="m6 8 6 2 6-2" /><path d="M12 10v4" />
-          </svg>
-          Route Timeline
-        </h3>
-        {totalCost > 0 && (
-          <span className="rounded-full bg-surface-muted px-3 py-1 font-[family-name:var(--font-mono)] text-xs font-semibold text-[var(--text-secondary)]">
-            Est. {totalCost.toFixed(2)} EUR
-          </span>
-        )}
-      </div>
+    <section>
+      <h3 className="mb-4 border-b border-[var(--border)] pb-2 font-[family-name:var(--font-display)] text-xl font-bold text-[var(--text-primary)]">
+        {t("results.routeTimeline")}
+      </h3>
 
-      {/* Horizontal scrollable journey strip */}
-      <div className="overflow-x-auto px-5 py-5">
-        <div className="flex items-stretch gap-0 min-w-max">
-          {timeline.map((entry, index) => {
-            const isFirst = index === 0;
-            const isLast = index === timeline.length - 1;
-            const prevEntry = index > 0 ? timeline[index - 1] : null;
-            const crossingLabel = prevEntry
-              ? crossingLabelMap.get(`${prevEntry.countryCode}-${entry.countryCode}`)
-              : null;
-            const distKm = countryDistances.get(entry.countryCode);
-            const officialUrl = OFFICIAL_LINKS[entry.countryCode];
+      <div className="space-y-0">
+        {timeline.map((entry, index) => {
+          const prevEntry = index > 0 ? timeline[index - 1] : null;
+          const distKm = countryDistances.get(entry.countryCode);
+          const officialUrl = OFFICIAL_LINKS[entry.countryCode];
+          const notices = countryNotices.get(entry.countryCode);
+          const crossingKey = prevEntry ? `${prevEntry.countryCode}-${entry.countryCode}` : null;
+          const crossingLabel = crossingKey ? crossingLabelMap.get(crossingKey) : null;
 
-            return (
-              <div key={`${entry.countryCode}-${index}`} className="flex items-stretch">
-                {/* Connector line between stamps */}
-                {!isFirst && (
-                  <div className="flex flex-col items-center justify-center px-1">
-                    <div className="flex items-center gap-1">
-                      <div className="h-px w-6 bg-[var(--border-strong)]" />
-                      <span className="whitespace-nowrap rounded-full border border-[var(--border)] bg-surface-muted px-2 py-0.5 text-[10px] font-medium text-[var(--text-muted)]">
-                        {crossingLabel ?? `${FLAG_EMOJI[prevEntry!.countryCode] ?? ""}\u2192${FLAG_EMOJI[entry.countryCode] ?? ""}`}
-                      </span>
-                      <div className="h-px w-6 bg-[var(--border-strong)]" />
-                    </div>
-                  </div>
-                )}
+          const badges: Array<{ label: string; type: "free" | "vignette" | "toll" | "urban"; icon: string }> = [];
+          if (!entry.requiresVignette && !entry.requiresSectionToll) {
+            badges.push({ label: "No vignette", type: "free", icon: "✓" });
+          }
+          if (entry.requiresVignette) {
+            badges.push({ label: "Vignette needed", type: "vignette", icon: "🏷" });
+          }
+          if (entry.requiresSectionToll) {
+            badges.push({ label: "Section toll", type: "toll", icon: "🛣" });
+          }
+          if (entry.hasUrbanAccessRisk) {
+            badges.push({ label: "Urban zone risk", type: "urban", icon: "⚠" });
+          }
 
-                {/* Country stamp */}
-                <div className={`flex w-[180px] flex-col rounded-xl border-2 p-3.5 transition-shadow hover:shadow-md ${getStampAccent(entry)} ${getStampBg(entry)}`}>
-                  {/* Flag + name header */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl leading-none">{FLAG_EMOJI[entry.countryCode] ?? ""}</span>
-                    <div className="min-w-0">
-                      <p className="truncate font-[family-name:var(--font-display)] text-sm font-bold text-[var(--text-primary)]">
+          const costDisplay = entry.estimatedCostEur !== undefined && entry.estimatedCostEur > 0
+            ? `-${entry.estimatedCostEur.toFixed(2)} EUR`
+            : "No charge";
+
+          return (
+            <div key={`${entry.countryCode}-${index}`}>
+              {/* Border crossing separator */}
+              {prevEntry && (
+                <div className="flex items-center gap-3 py-3">
+                  <div className="h-px flex-1 border-t border-dashed border-[var(--border-strong)]" />
+                  <span className="whitespace-nowrap rounded-full border border-[var(--border)] bg-surface-muted px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                    {crossingLabel
+                      ? `${getFlagEmoji(prevEntry.countryCode)} ${crossingLabel} ${getFlagEmoji(entry.countryCode)}`
+                      : `BORDER CROSSING · ${prevEntry.countryCode} → ${entry.countryCode}`}
+                  </span>
+                  <div className="h-px flex-1 border-t border-dashed border-[var(--border-strong)]" />
+                </div>
+              )}
+
+              {/* Country card */}
+              <div className="flex gap-4 rounded-2xl border border-[var(--border)] bg-surface p-4 shadow-sm sm:p-5">
+                {/* Flag circle */}
+                <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-white ${getFlagCircleBg(entry.countryCode)}`}>
+                  <span className="text-xs font-bold">{entry.countryCode}</span>
+                </div>
+
+                {/* Content */}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-[family-name:var(--font-display)] text-base font-bold text-[var(--text-primary)]">
+                        <span className="mr-1 text-xs font-semibold uppercase text-[var(--text-muted)]">{entry.countryCode}</span>
                         {COUNTRY_NAMES[entry.countryCode] ?? entry.countryCode}
                       </p>
-                      <p className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-wide">
-                        {isFirst ? "START" : isLast ? "DESTINATION" : `STOP ${index}`}
-                      </p>
+                      {distKm !== undefined && distKm > 0 && (
+                        <p className="mt-0.5 text-xs text-[var(--text-muted)]">{distKm} km on highways</p>
+                      )}
                     </div>
-                  </div>
-
-                  {/* Distance + cost */}
-                  <div className="mt-3 flex items-center justify-between gap-2">
-                    {distKm !== undefined && distKm > 0 && (
-                      <span className="font-[family-name:var(--font-mono)] text-xs text-[var(--text-muted)]">{distKm} km</span>
-                    )}
-                    {entry.estimatedCostEur !== undefined && entry.estimatedCostEur > 0 && (
-                      <span className="font-[family-name:var(--font-mono)] text-xs font-semibold text-[var(--text-primary)]">
-                        ~{entry.estimatedCostEur.toFixed(2)} EUR
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Status badge */}
-                  <div className="mt-2.5 flex flex-wrap gap-1">
-                    <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold text-[var(--text-primary)]`}>
-                      <span className={`inline-block h-1.5 w-1.5 rounded-full ${getBadgeDot(entry)}`} />
-                      {entry.requiresVignette && entry.requiresSectionToll
-                        ? "Vignette + Toll"
-                        : entry.requiresVignette
-                          ? "Vignette needed"
-                          : entry.requiresSectionToll
-                            ? "Section toll"
-                            : "No charges"}
+                    <span className={`whitespace-nowrap rounded-md border px-2.5 py-1 font-[family-name:var(--font-mono)] text-xs font-semibold ${
+                      entry.estimatedCostEur && entry.estimatedCostEur > 0
+                        ? "border-amber-200 bg-amber-50 text-amber-800"
+                        : "border-emerald-200 bg-emerald-50 text-emerald-800"
+                    }`}>
+                      {costDisplay}
                     </span>
                   </div>
 
-                  {/* Official link */}
+                  {/* Description from action text and notices */}
+                  {(entry.action || (notices && notices.length > 0)) && (
+                    <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
+                      {entry.action}
+                      {notices?.map((notice, ni) => (
+                        <span key={ni}>{entry.action ? " " : ""}{notice}</span>
+                      ))}
+                    </p>
+                  )}
+
+                  {/* Badges */}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {badges.map((badge) => (
+                      <span key={badge.label} className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium ${getBadgeStyle(badge.type)}`}>
+                        {badge.icon} {badge.label}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Official buy link */}
                   {entry.requiresVignette && officialUrl && (
                     <a
                       href={officialUrl}
                       target="_blank"
                       rel="noreferrer noopener"
-                      className="mt-2 text-[11px] font-medium text-[var(--accent)] hover:underline"
+                      className="mt-2 inline-block text-sm font-medium text-[var(--accent)] hover:underline"
                     >
-                      Buy vignette ↗
+                      Buy on {new URL(officialUrl).hostname.replace("www.", "")} ↗
                     </a>
                   )}
                 </div>
               </div>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })}
       </div>
     </section>
   );

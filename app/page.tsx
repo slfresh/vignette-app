@@ -4,17 +4,13 @@ import { ConsentBanner } from "@/components/legal/ConsentBanner";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import { RouteForm, type RouteFormHandle } from "@/components/route/RouteForm";
 import { useSearchParams, useRouter } from "next/navigation";
-import { AppliedPreferencesBanner } from "@/components/results/AppliedPreferencesBanner";
 import { ComplianceBadge } from "@/components/results/ComplianceBadge";
 import { BRAND } from "@/lib/config/branding";
-import { MonetizationPanel } from "@/components/results/MonetizationPanel";
+import { COUNTRY_NAMES } from "@/lib/config/countryNames";
 import { ResultsSkeleton } from "@/components/results/ResultsSkeleton";
-import { RouteCountrySummary } from "@/components/results/RouteCountrySummary";
-import { SectionTollAlert } from "@/components/results/SectionTollAlert";
-import { TripCostSummary } from "@/components/results/TripCostSummary";
-import { TripReadinessPanel } from "@/components/results/TripReadinessPanel";
 import { TripShieldPanel } from "@/components/results/TripShieldPanel";
-import { VignetteResultCard } from "@/components/results/VignetteResultCard";
+import { FuelStrategyPanel } from "@/components/results/FuelStrategyPanel";
+import { ShareActions } from "@/components/results/ShareActions";
 import type { CountryCode, RoutePoint } from "@/types/vignette";
 import { AlertTriangle, MapPin, RefreshCw } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -31,12 +27,9 @@ const TripAssistant = dynamic(() => import("@/components/ai/TripAssistant").then
   ssr: false,
 });
 
-const AiTollExplainer = dynamic(() => import("@/components/ai/AiTollExplainer").then((mod) => mod.AiTollExplainer), {
-  ssr: false,
-});
-
 import { VisualRouteTimeline } from "@/components/results/VisualRouteTimeline";
 import { AlternativeRoutesPanel } from "@/components/results/AlternativeRoutesPanel";
+import { RouteBriefingCard } from "@/components/results/RouteBriefingCard";
 
 function safeDecodeParam(value: string | null): string {
   if (!value) return "";
@@ -163,18 +156,6 @@ function HomeContent() {
     return () => clearTimeout(timer);
   }, [formValues.startPoint, formValues.endPoint]);
 
-  const { setHoveredCountryCode, setLockedCountryCode } = route;
-
-  const handleCountryHover = useCallback(
-    (code: string | null) => setHoveredCountryCode(code as CountryCode | null),
-    [setHoveredCountryCode],
-  );
-
-  const handleCountryLockToggle = useCallback(
-    (code: string) => setLockedCountryCode((prev) => (prev === code ? null : code) as typeof prev),
-    [setLockedCountryCode],
-  );
-
   return (
     <main id="main-content" className="flex min-h-screen w-full flex-col" tabIndex={-1}>
       {/* ─── Slim Topbar ─── */}
@@ -220,6 +201,7 @@ function HomeContent() {
             showTraffic={overlays.showTraffic}
             onToggleTraffic={overlays.setShowTraffic}
             trafficTileUrl={overlays.trafficTileUrl}
+            trafficIncidentTileUrl={overlays.trafficIncidentTileUrl}
             geoPosition={geo.position}
             geoLoading={geo.loading}
           />
@@ -313,49 +295,118 @@ function HomeContent() {
 
         {/* Results section */}
         {route.result ? (
-          <section className="grid gap-6" aria-live="polite">
-            <AppliedPreferencesBanner result={route.result} />
+          <section className="grid gap-8" aria-live="polite">
 
-            {/* Budget Hero */}
-            {route.result.tripEstimate && (
-              <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-surface shadow-sm">
-                <div className="border-b border-[var(--border)] bg-surface-muted px-6 py-6">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                    {t("results.estimatedBudget")}
+            {/* ── Budget Hero ── */}
+            {(() => {
+              const est = route.result!.tripEstimate;
+              const readiness = route.result!.tripReadiness;
+              const countries = route.result!.countries;
+              const durationSec = route.result!.estimatedDurationSeconds ?? 0;
+              const dateLabel = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date()).toUpperCase();
+              const startLabel = formValues.start || readiness?.timeline?.[0]?.label || countries[0]?.countryCode || "";
+              const endLabel = formValues.end || readiness?.timeline?.[readiness.timeline.length - 1]?.label || countries[countries.length - 1]?.countryCode || "";
+              const confidence = readiness?.confidenceScore ?? 0;
+              const dots = Array.from({ length: 10 }, (_, i) => i < Math.round(confidence / 10));
+
+              const durationHours = Math.floor(durationSec / 3600);
+              const durationMinutes = Math.round((durationSec % 3600) / 60);
+              const durationLabel = durationSec > 0 ? `${durationHours}h ${durationMinutes}m` : null;
+              const etaDate = durationSec > 0 ? new Date(Date.now() + durationSec * 1000) : null;
+              const etaLabel = etaDate
+                ? new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(etaDate)
+                : null;
+
+              return (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)]">
+                    {t("results.routeCalculated")} · {dateLabel}
                   </p>
-                  <p className="mt-2 font-[family-name:var(--font-display)] text-5xl font-bold tracking-tight text-[var(--text-primary)] sm:text-6xl">
-                    {route.result.tripEstimate.totalRoadChargesEur.toFixed(2)}
-                    <span className="ml-2 font-[family-name:var(--font-sans)] text-2xl font-medium text-[var(--text-muted)]">EUR</span>
-                  </p>
-                </div>
-                <div className="grid gap-2 px-6 py-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                  <div className="rounded-lg bg-surface-muted px-3 py-2">
-                    <p className="text-xs text-[var(--text-muted)]">{t("results.vignettes")}</p>
-                    <p className="font-[family-name:var(--font-mono)] font-semibold text-[var(--text-primary)]">{route.result.tripEstimate.vignetteEstimateEur.toFixed(2)} EUR</p>
+                  <h2 className="mt-2 font-[family-name:var(--font-display)] text-3xl font-bold tracking-tight text-[var(--text-primary)] sm:text-4xl">
+                    {t("results.journeyBreakdown").split("{accent}")[0]}
+                    <em className="not-italic text-[var(--accent)]">{t("results.journeyBreakdownAccent")}</em>
+                    <br />{t("results.journeyBreakdown").split("{accent}")[1]}
+                  </h2>
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+                    <p className="text-sm text-[var(--text-secondary)]">
+                      {countries.map((c, i) => (
+                        <span key={c.countryCode}>
+                          {i > 0 && <span className="mx-1.5 text-[var(--text-muted)]">→</span>}
+                          <span className="text-xs font-semibold uppercase text-[var(--text-muted)]">{c.countryCode}</span>{" "}
+                          {i === 0 ? startLabel.split(",")[0] : i === countries.length - 1 ? endLabel.split(",")[0] : (COUNTRY_NAMES[c.countryCode] ?? c.countryCode)}
+                        </span>
+                      ))}
+                    </p>
+                    {confidence > 0 && (
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-surface px-3 py-1 text-xs font-medium text-[var(--text-secondary)]">
+                        {dots.map((filled, i) => (
+                          <span key={i} className={`inline-block h-1.5 w-1.5 rounded-full ${filled ? "bg-[var(--accent-green)]" : "bg-[var(--border-strong)]"}`} />
+                        ))}
+                        <span className="ml-0.5">{confidence}/100 confidence</span>
+                      </span>
+                    )}
                   </div>
-                  <div className="rounded-lg bg-surface-muted px-3 py-2">
-                    <p className="text-xs text-[var(--text-muted)]">{t("results.sectionTolls")}</p>
-                    <p className="font-[family-name:var(--font-mono)] font-semibold text-[var(--text-primary)]">{route.result.tripEstimate.sectionTollEstimateEur.toFixed(2)} EUR</p>
-                  </div>
-                  {route.result.tripEstimate.fuel ? (
-                    <div className="rounded-lg bg-surface-muted px-3 py-2">
-                      <p className="text-xs text-[var(--text-muted)]">{t("results.fuelEstimate")}</p>
-                      <p className="font-[family-name:var(--font-mono)] font-semibold text-[var(--text-primary)]">~{route.result.tripEstimate.fuel.estimatedFuelCostEur.toFixed(2)} EUR</p>
+
+                  {est && (
+                    <div className="mt-6 overflow-hidden rounded-2xl bg-[#1a1a1f] text-white shadow-lg">
+                      <div className="px-6 py-6 sm:px-8 sm:py-8">
+                        <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[var(--accent)]">
+                          {t("results.estimatedRoadCharges")}
+                        </p>
+                        <p className="mt-3 font-[family-name:var(--font-display)] text-5xl font-bold tracking-tight sm:text-6xl">
+                          {est.totalRoadChargesEur.toFixed(2)}
+                          <span className="ml-2 text-2xl font-medium text-white/60">EUR</span>
+                        </p>
+                        <p className="mt-2 text-xs text-white/40">{t("results.referenceOnly")}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-px bg-white/5 lg:grid-cols-4">
+                        <div className="px-4 py-3 sm:px-6">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Vignettes</p>
+                          <p className="mt-1 font-[family-name:var(--font-mono)] text-base font-semibold text-[var(--accent-green)]">{est.vignetteEstimateEur.toFixed(2)} €</p>
+                        </div>
+                        <div className="px-4 py-3 sm:px-6">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Section Tolls</p>
+                          <p className="mt-1 font-[family-name:var(--font-mono)] text-base font-semibold text-[var(--accent-green)]">{est.sectionTollEstimateEur.toFixed(2)} €</p>
+                        </div>
+                        {est.fuel ? (
+                          <div className="px-4 py-3 sm:px-6">
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Fuel Estimate</p>
+                            <p className="mt-1 font-[family-name:var(--font-mono)] text-base font-semibold text-white">{est.fuel.estimatedFuelCostEur.toFixed(2)} €</p>
+                          </div>
+                        ) : est.electric ? (
+                          <div className="px-4 py-3 sm:px-6">
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Charging Est.</p>
+                            <p className="mt-1 font-[family-name:var(--font-mono)] text-base font-semibold text-white">~{est.electric.estimatedChargingCostEur.toFixed(2)} €</p>
+                          </div>
+                        ) : null}
+                        <div className="px-4 py-3 sm:px-6">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Total Distance</p>
+                          <p className="mt-1 font-[family-name:var(--font-mono)] text-base font-semibold text-[var(--accent)]">{est.totalDistanceKm.toFixed(0)} km</p>
+                        </div>
+                      </div>
+                      {durationLabel && (
+                        <div className="grid grid-cols-2 gap-px bg-white/5">
+                          <div className="px-4 py-3 sm:px-6">
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">{t("results.drivingTime")}</p>
+                            <p className="mt-1 font-[family-name:var(--font-mono)] text-base font-semibold text-white">{durationLabel}</p>
+                          </div>
+                          {etaLabel && (
+                            <div className="px-4 py-3 sm:px-6">
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">{t("results.estimatedArrival")}</p>
+                              <p className="mt-1 font-[family-name:var(--font-mono)] text-base font-semibold text-[var(--accent)]">{etaLabel}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  ) : null}
-                  {route.result.tripEstimate.electric ? (
-                    <div className="rounded-lg bg-surface-muted px-3 py-2">
-                      <p className="text-xs text-[var(--text-muted)]">{t("results.chargingEstimate")}</p>
-                      <p className="font-[family-name:var(--font-mono)] font-semibold text-[var(--text-primary)]">~{route.result.tripEstimate.electric.estimatedChargingCostEur.toFixed(2)} EUR</p>
-                    </div>
-                  ) : null}
-                  <div className="rounded-lg bg-surface-muted px-3 py-2">
-                    <p className="text-xs text-[var(--text-muted)]">{t("results.totalDistance")}</p>
-                    <p className="font-[family-name:var(--font-mono)] font-semibold text-[var(--text-primary)]">{route.result.tripEstimate.totalDistanceKm.toFixed(0)} km</p>
-                  </div>
+                  )}
                 </div>
-              </div>
-            )}
+              );
+            })()}
+
+            <RouteBriefingCard result={route.result} />
+
+            <VisualRouteTimeline result={route.result} />
 
             <TripShieldPanel
               tripShield={route.result.tripShield}
@@ -365,36 +416,7 @@ function HomeContent() {
               hasBorderCameraData
             />
 
-            <VisualRouteTimeline result={route.result} />
-            <AiTollExplainer result={route.result} />
-            <RouteCountrySummary countries={route.result.countries} onCountryClick={route.handleCountrySummaryClick} />
-            <TripReadinessPanel result={route.result} />
-            <TripCostSummary result={route.result} />
-            <SectionTollAlert notices={route.result.sectionTolls} />
-
-            <div className="grid gap-4 md:grid-cols-2">
-              {route.result.countries.map((country, index) => {
-                const isFirst = index === 0;
-                const expanded = isFirst || route.activeCountryCode === country.countryCode || route.expandedCountryCodes.has(country.countryCode);
-                return (
-                  <div
-                    key={country.countryCode}
-                    ref={(el) => { route.countryCardRefs.current[country.countryCode] = el; }}
-                  >
-                    <VignetteResultCard
-                      country={country}
-                      vehicleClass={route.result!.appliedPreferences?.vehicleClass ?? "PASSENGER_CAR_M1"}
-                      powertrainType={route.result!.appliedPreferences?.powertrainType ?? "PETROL"}
-                      highlighted={route.activeCountryCode === country.countryCode}
-                      expanded={expanded}
-                      onHover={handleCountryHover}
-                      onToggleLock={handleCountryLockToggle}
-                      onExpandToggle={route.handleExpandToggle}
-                    />
-                  </div>
-                );
-              })}
-            </div>
+            <FuelStrategyPanel estimate={route.result.tripEstimate} />
 
             <AlternativeRoutesPanel
               currentResult={route.result}
@@ -402,7 +424,9 @@ function HomeContent() {
               currentAvoidsTolls={route.result.appliedPreferences?.avoidTolls ?? false}
             />
 
-            <MonetizationPanel estimatedSavingsEuro={route.estimatedSavingsEuro} />
+            {/* ── Share Actions ── */}
+            <ShareActions result={route.result} onOpenAiChat={() => overlays.setShowAiChat(true)} />
+
             <ComplianceBadge compliance={route.result.compliance} />
           </section>
         ) : null}

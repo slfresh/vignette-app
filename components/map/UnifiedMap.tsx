@@ -13,6 +13,8 @@ import "react-leaflet-cluster/dist/assets/MarkerCluster.css";
 import "react-leaflet-cluster/dist/assets/MarkerCluster.Default.css";
 import type { CountryCode, RouteLineString, RoutePoint } from "@/types/vignette";
 import { getAllCameraFeeds } from "@/lib/border/cameraPins";
+import { getFlagEmoji } from "@/lib/utils/flagEmoji";
+import { COUNTRY_NAMES } from "@/lib/config/countryNames";
 import { getAllHighwayCameras, type HighwayCamera } from "@/lib/cameras/highwayCameras";
 import type { SpeedCamera } from "@/lib/cameras/speedCameras";
 import { useI18n } from "@/components/i18n/I18nProvider";
@@ -99,33 +101,17 @@ const highwayCamIcon = L.divIcon({
 });
 
 /* ─── Flag/country helpers ─── */
-const FLAG_EMOJI: Record<string, string> = {
-  DE: "🇩🇪", AT: "🇦🇹", CZ: "🇨🇿", SK: "🇸🇰", HU: "🇭🇺", SI: "🇸🇮", CH: "🇨🇭", RO: "🇷🇴",
-  BG: "🇧🇬", HR: "🇭🇷", RS: "🇷🇸", DK: "🇩🇰", SE: "🇸🇪", NL: "🇳🇱", BE: "🇧🇪", FR: "🇫🇷",
-  IT: "🇮🇹", BA: "🇧🇦", ME: "🇲🇪", XK: "🇽🇰", MK: "🇲🇰", AL: "🇦🇱", PL: "🇵🇱", ES: "🇪🇸",
-  PT: "🇵🇹", GB: "🇬🇧", IE: "🇮🇪", TR: "🇹🇷", GR: "🇬🇷",
-};
-
-const COUNTRY_NAME: Record<string, string> = {
-  DE: "Germany", AT: "Austria", CZ: "Czechia", SK: "Slovakia", HU: "Hungary",
-  SI: "Slovenia", CH: "Switzerland", RO: "Romania", BG: "Bulgaria", HR: "Croatia",
-  RS: "Serbia", DK: "Denmark", SE: "Sweden", NL: "Netherlands", BE: "Belgium",
-  FR: "France", IT: "Italy", BA: "Bosnia", ME: "Montenegro", XK: "Kosovo",
-  MK: "N. Macedonia", AL: "Albania", PL: "Poland", ES: "Spain", PT: "Portugal",
-  GB: "UK", IE: "Ireland", TR: "Turkey", GR: "Greece",
-};
-
 function getFlag(code: string): string {
-  return FLAG_EMOJI[code] ?? "🏳️";
+  return getFlagEmoji(code);
 }
 function getCountryName(code: string): string {
-  return COUNTRY_NAME[code] ?? code;
+  return COUNTRY_NAMES[code] ?? code;
 }
 
 /** Creates a flag-pair icon for plain border crossings (no camera). */
 function createBorderIcon(codeFrom: string, codeTo: string): L.DivIcon {
-  const flagFrom = FLAG_EMOJI[codeFrom] ?? "🏳️";
-  const flagTo = FLAG_EMOJI[codeTo] ?? "🏳️";
+  const flagFrom = getFlagEmoji(codeFrom);
+  const flagTo = getFlagEmoji(codeTo);
   return L.divIcon({
     html: `<div style="display:flex;align-items:center;justify-content:center;gap:1px;width:44px;height:26px;border-radius:13px;background:var(--surface);border:2px solid var(--border-strong);box-shadow:0 2px 4px rgba(0,0,0,0.15);font-size:13px;line-height:1">${flagFrom}${flagTo}</div>`,
     className: "border-crossing-pin",
@@ -295,13 +281,13 @@ function MapContextPopup({
       >
         <div className="context-popup min-w-[210px] text-center">
           {clicked.label === null ? (
-            <p className="flex items-center justify-center gap-2 py-1 text-sm text-zinc-500">
-              <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent" />
+            <p className="flex items-center justify-center gap-2 py-1 text-sm text-[var(--text-muted)]">
+              <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--border)] border-t-transparent" />
               {t("map.loadingAddress")}
             </p>
           ) : (
             <>
-              <p className="mb-3 text-sm font-semibold text-zinc-900">
+              <p className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
                 {clicked.label}
               </p>
               <div className="flex flex-col gap-1.5">
@@ -366,6 +352,7 @@ export interface UnifiedMapProps {
   showTraffic?: boolean;
   onToggleTraffic?: (next: boolean) => void;
   trafficTileUrl?: string | null;
+  trafficIncidentTileUrl?: string | null;
 
   /* ── Geolocation ── */
   geoPosition?: { lat: number; lon: number } | null;
@@ -394,6 +381,7 @@ export const UnifiedMap = memo(function UnifiedMap({
   showTraffic = false,
   onToggleTraffic,
   trafficTileUrl = null,
+  trafficIncidentTileUrl = null,
   geoPosition,
   geoLoading = false,
 }: UnifiedMapProps) {
@@ -501,8 +489,17 @@ export const UnifiedMap = memo(function UnifiedMap({
       {showTraffic && trafficTileUrl && (
         <TileLayer
           url={trafficTileUrl}
-          opacity={0.7}
+          opacity={0.8}
           zIndex={10}
+        />
+      )}
+
+      {/* Traffic incident overlay (TomTom) */}
+      {showTraffic && trafficIncidentTileUrl && (
+        <TileLayer
+          url={trafficIncidentTileUrl}
+          opacity={0.8}
+          zIndex={11}
         />
       )}
 
@@ -550,7 +547,7 @@ export const UnifiedMap = memo(function UnifiedMap({
           icon={createBorderIcon(crossing.countryCodeFrom, crossing.countryCodeTo)}
         >
           <Popup>
-            <div className="min-w-[160px] text-center text-sm font-medium text-zinc-900">
+            <div className="min-w-[160px] text-center text-sm font-medium text-[var(--text-primary)]">
               {getFlag(crossing.countryCodeFrom)} {getCountryName(crossing.countryCodeFrom)} →{" "}
               {getFlag(crossing.countryCodeTo)} {getCountryName(crossing.countryCodeTo)}
             </div>
@@ -569,7 +566,7 @@ export const UnifiedMap = memo(function UnifiedMap({
             >
               <Popup>
                 <div className="min-w-[220px] max-w-[280px] text-center">
-                  <p className="text-base font-bold text-zinc-900">
+                  <p className="text-base font-bold text-[var(--text-primary)]">
                     {getFlag(cam.countryCodeFrom)} {getCountryName(cam.countryCodeFrom)} ↔{" "}
                     {getFlag(cam.countryCodeTo)} {getCountryName(cam.countryCodeTo)}
                   </p>
@@ -578,12 +575,12 @@ export const UnifiedMap = memo(function UnifiedMap({
                     target="_blank"
                     rel="noreferrer noopener"
                     aria-label={`View live camera at ${cam.label} border crossing`}
-                    className="mt-3 block rounded-lg bg-sky-700 px-3 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                    className="mt-3 block rounded-lg bg-[var(--accent)] px-3 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
                   >
                     🎥 {cam.label}
                     <span aria-hidden className="ml-1">↗</span>
                   </a>
-                  <p className="mt-2 text-xs text-zinc-500">{t("map.cameraFeedHint")}</p>
+                  <p className="mt-2 text-xs text-[var(--text-muted)]">{t("map.cameraFeedHint")}</p>
                 </div>
               </Popup>
             </Marker>
@@ -602,19 +599,19 @@ export const UnifiedMap = memo(function UnifiedMap({
             >
               <Popup>
                 <div className="min-w-[180px] max-w-[260px] text-center">
-                  <p className="text-sm font-bold text-red-700">
+                  <p className="text-sm font-bold text-[var(--danger)]">
                     {t("map.speedCameraPopup")}
                   </p>
                   {cam.speedLimit && (
-                    <p className="mt-1 text-lg font-bold text-zinc-900">
+                    <p className="mt-1 text-lg font-bold text-[var(--text-primary)]">
                       {t("map.speedLimit")}: {cam.speedLimit} km/h
                     </p>
                   )}
                   {cam.road && (
-                    <p className="mt-1 text-xs text-zinc-600">{cam.road}</p>
+                    <p className="mt-1 text-xs text-[var(--text-secondary)]">{cam.road}</p>
                   )}
                   {cam.city && (
-                    <p className="text-xs text-zinc-500">{cam.city}</p>
+                    <p className="text-xs text-[var(--text-muted)]">{cam.city}</p>
                   )}
                 </div>
               </Popup>
@@ -647,7 +644,7 @@ export const UnifiedMap = memo(function UnifiedMap({
                     🎥 {cam.label}
                     <span aria-hidden className="ml-1">↗</span>
                   </a>
-                  <p className="mt-2 text-xs text-zinc-500">{t("map.highwayCameraHint")}</p>
+                  <p className="mt-2 text-xs text-[var(--text-muted)]">{t("map.highwayCameraHint")}</p>
                 </div>
               </Popup>
             </Marker>
@@ -777,7 +774,7 @@ export const UnifiedMap = memo(function UnifiedMap({
         )}
 
         {/* Traffic layer */}
-        {onToggleTraffic && trafficTileUrl && (
+        {onToggleTraffic && (trafficTileUrl || trafficIncidentTileUrl) && (
           <button
             type="button"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleTrafficToggle(); }}
@@ -793,7 +790,7 @@ export const UnifiedMap = memo(function UnifiedMap({
 
       {/* Lufop attribution (when speed cameras shown) */}
       {showSpeedCameras && speedCameras.length > 0 && (
-        <div className="absolute bottom-1 left-1 z-[1000] rounded bg-white/80 px-1.5 py-0.5 text-[10px] text-zinc-500">
+        <div className="absolute bottom-1 left-1 z-[1000] rounded bg-[var(--background)]/80 px-1.5 py-0.5 text-[10px] text-[var(--text-muted)]">
           <a href="https://lufop.net" target="_blank" rel="noreferrer noopener" className="hover:underline">
             {t("map.lufopAttribution")}
           </a>

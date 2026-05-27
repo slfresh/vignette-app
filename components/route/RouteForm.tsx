@@ -1,11 +1,12 @@
 "use client";
 
-import { Bike, Car, ChevronDown, Info, Loader2, Search, Send, Settings, Truck } from "lucide-react";
+import { Bike, Car, ChevronDown, Info, Loader2, Send, Settings, Truck } from "lucide-react";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import type { TranslationKey } from "@/lib/i18n/translations";
 import type { EmissionClass, PowertrainType, RoutePoint, VehicleClass } from "@/types/vignette";
 import { getRecentSearches, addRecentSearch, clearRecentSearches, type RecentSearch } from "@/lib/storage/recentSearches";
+import { AddressInput } from "@/components/route/AddressInput";
 
 interface GeocodeSuggestion {
   label: string;
@@ -14,27 +15,6 @@ interface GeocodeSuggestion {
 }
 
 const STORAGE_KEY = "eurodrive_form_prefs";
-
-function getLocalizedNameHint(query: string, label: string): string | null {
-  const normalizedQuery = query.trim().toLowerCase();
-  if (normalizedQuery === "osijek" && /\besseg\b/i.test(label)) {
-    return "Osijek, localized historical name";
-  }
-  return null;
-}
-
-function extractHouseNumber(value: string): string | null {
-  const match = value.match(/\b\d+[a-zA-Z]?\b/);
-  return match ? match[0].toLowerCase() : null;
-}
-
-function hasExactHouseNumberMatch(value: string, suggestions: GeocodeSuggestion[]): boolean {
-  const houseNumber = extractHouseNumber(value);
-  if (!houseNumber) {
-    return true;
-  }
-  return suggestions.some((suggestion) => suggestion.label.toLowerCase().includes(houseNumber));
-}
 
 interface RouteFormProps {
   onSubmit: (payload: {
@@ -99,10 +79,6 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
   const [endFocused, setEndFocused] = useState(false);
   const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
   const isMotorcycle = vehicleType === "motorcycle";
-  const startNeedsApproximateMatchWarning =
-    start.trim().length >= 3 && extractHouseNumber(start) && startSuggestions.length > 0 && !hasExactHouseNumberMatch(start, startSuggestions);
-  const endNeedsApproximateMatchWarning =
-    end.trim().length >= 3 && extractHouseNumber(end) && endSuggestions.length > 0 && !hasExactHouseNumberMatch(end, endSuggestions);
 
   function toVehicleClass(value: "car" | "motorcycle" | "camper"): VehicleClass {
     if (value === "motorcycle") {
@@ -344,246 +320,50 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
 
       <div className="grid gap-5 p-5">
         {/* ─── Origin ─── */}
-        <div className="relative grid gap-1.5 text-sm">
-          <span className="flex items-center gap-2 font-semibold text-[var(--text-primary)]">
-            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent-green)] text-[10px] font-bold text-white" aria-hidden>A</span>
-            {t("form.start")}
-          </span>
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
-            <input
-              role="combobox"
-              aria-expanded={startSuggestions.length > 0}
-              aria-controls="start-listbox"
-              aria-activedescendant={activeStartSuggestionIndex >= 0 ? `start-option-${activeStartSuggestionIndex}` : undefined}
-              aria-autocomplete="list"
-              className={inputClasses}
-              placeholder={t("form.startPlaceholder")}
-              value={start}
-              onFocus={() => setStartFocused(true)}
-              onBlur={() => setTimeout(() => setStartFocused(false), 150)}
-              onChange={(event) => {
-                setStart(event.target.value);
-                setStartPoint(undefined);
-              }}
-              onKeyDown={(event) => {
-                if (!startSuggestions.length) return;
-                if (event.key === "ArrowDown") {
-                  event.preventDefault();
-                  setActiveStartSuggestionIndex((previous) => (previous + 1) % startSuggestions.length);
-                  return;
-                }
-                if (event.key === "ArrowUp") {
-                  event.preventDefault();
-                  setActiveStartSuggestionIndex((previous) => (previous <= 0 ? startSuggestions.length - 1 : previous - 1));
-                  return;
-                }
-                if (event.key === "Enter" && activeStartSuggestionIndex >= 0) {
-                  event.preventDefault();
-                  const suggestion = startSuggestions[activeStartSuggestionIndex];
-                  if (suggestion) applyStartSuggestion(suggestion);
-                  return;
-                }
-                if (event.key === "Escape") {
-                  event.preventDefault();
-                  setStartSuggestions([]);
-                  setActiveStartSuggestionIndex(-1);
-                }
-              }}
-            />
-          </div>
-          {startSuggestions.length ? (
-            <div id="start-listbox" role="listbox" className="absolute left-0 right-0 top-[100%] z-20 mt-1 max-h-52 overflow-auto rounded-lg border border-[var(--border)] bg-surface shadow-lg">
-              {startSuggestions.map((suggestion, index) => (
-                <button
-                  id={`start-option-${index}`}
-                  key={`${suggestion.label}-${suggestion.lat}-${suggestion.lon}`}
-                  type="button"
-                  role="option"
-                  aria-selected={index === activeStartSuggestionIndex}
-                  className={`block w-full px-4 py-2.5 text-left text-sm text-[var(--text-primary)] transition-colors hover:bg-surface-muted ${
-                    index === activeStartSuggestionIndex ? "bg-surface-muted text-[var(--accent)]" : ""
-                  }`}
-                  onMouseEnter={() => setActiveStartSuggestionIndex(index)}
-                  onMouseDown={(event) => {
-                    event.preventDefault();
-                    applyStartSuggestion(suggestion);
-                  }}
-                >
-                  {suggestion.label}
-                  {getLocalizedNameHint(start, suggestion.label) ? (
-                    <span className="ml-2 text-xs text-[var(--text-muted)]">({getLocalizedNameHint(start, suggestion.label)})</span>
-                  ) : null}
-                </button>
-              ))}
-            </div>
-          ) : null}
-          {/* Recent searches: shown when input focused, empty, and no autocomplete results */}
-          {startFocused && !startSuggestions.length && !startPoint && start.trim().length < 2 && recentSearches.length > 0 ? (
-            <div className="absolute left-0 right-0 top-[100%] z-20 mt-1 overflow-auto rounded-lg border border-[var(--border)] bg-surface shadow-lg">
-              <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-2">
-                <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                  {t("recentSearches.title")}
-                </span>
-                <button
-                  type="button"
-                  className="text-xs font-medium text-[var(--accent)] hover:underline"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    clearRecentSearches();
-                    setRecentSearches([]);
-                  }}
-                >
-                  {t("recentSearches.clear")}
-                </button>
-              </div>
-              {recentSearches.map((item) => (
-                <button
-                  key={`recent-start-${item.label}-${item.lat}-${item.lon}`}
-                  type="button"
-                  className="block w-full px-4 py-2.5 text-left text-sm text-[var(--text-primary)] transition-colors hover:bg-surface-muted"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    applyStartSuggestion({ label: item.label, lat: item.lat, lon: item.lon });
-                  }}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          ) : null}
-          {startPoint ? <p className="text-xs font-medium text-[var(--accent-green)]">{t("form.selectedAddressLocked")}</p> : null}
-          {startNeedsApproximateMatchWarning ? (
-            <div className="mt-1 rounded-lg border border-[var(--accent)]/30 bg-[#FDF6EC] px-3 py-1.5 text-xs text-[var(--text-secondary)]">
-              {t("form.approxWarning")}
-              <button type="button" className="ml-2 font-medium underline" onClick={() => { setStartPoint(undefined); setStartSuggestions([]); }}>
-                {t("form.useTypedAddress")}
-              </button>
-            </div>
-          ) : null}
-        </div>
+        <AddressInput
+          marker="A"
+          markerColor="bg-[var(--accent-green)]"
+          labelKey="form.start"
+          placeholderKey="form.startPlaceholder"
+          idPrefix="start"
+          value={start}
+          onChange={(v) => { setStart(v); setStartPoint(undefined); }}
+          selectedPoint={startPoint}
+          suggestions={startSuggestions}
+          activeIndex={activeStartSuggestionIndex}
+          onActiveIndexChange={setActiveStartSuggestionIndex}
+          onSelectSuggestion={applyStartSuggestion}
+          onClearSuggestions={() => setStartSuggestions([])}
+          onClearPoint={() => { setStartPoint(undefined); setStartSuggestions([]); }}
+          focused={startFocused}
+          onFocusChange={setStartFocused}
+          recentSearches={recentSearches}
+          onClearRecentSearches={() => { clearRecentSearches(); setRecentSearches([]); }}
+          inputClassName={inputClasses}
+        />
 
         {/* ─── Destination ─── */}
-        <div className="relative grid gap-1.5 text-sm">
-          <span className="flex items-center gap-2 font-semibold text-[var(--text-primary)]">
-            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent-red)] text-[10px] font-bold text-white" aria-hidden>B</span>
-            {t("form.destination")}
-          </span>
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
-            <input
-              role="combobox"
-              aria-expanded={endSuggestions.length > 0}
-              aria-controls="end-listbox"
-              aria-activedescendant={activeEndSuggestionIndex >= 0 ? `end-option-${activeEndSuggestionIndex}` : undefined}
-              aria-autocomplete="list"
-              className={inputClasses}
-              placeholder={t("form.destinationPlaceholder")}
-              value={end}
-              onFocus={() => setEndFocused(true)}
-              onBlur={() => setTimeout(() => setEndFocused(false), 150)}
-              onChange={(event) => {
-                setEnd(event.target.value);
-                setEndPoint(undefined);
-              }}
-              onKeyDown={(event) => {
-                if (!endSuggestions.length) return;
-                if (event.key === "ArrowDown") {
-                  event.preventDefault();
-                  setActiveEndSuggestionIndex((previous) => (previous + 1) % endSuggestions.length);
-                  return;
-                }
-                if (event.key === "ArrowUp") {
-                  event.preventDefault();
-                  setActiveEndSuggestionIndex((previous) => (previous <= 0 ? endSuggestions.length - 1 : previous - 1));
-                  return;
-                }
-                if (event.key === "Enter" && activeEndSuggestionIndex >= 0) {
-                  event.preventDefault();
-                  const suggestion = endSuggestions[activeEndSuggestionIndex];
-                  if (suggestion) applyEndSuggestion(suggestion);
-                  return;
-                }
-                if (event.key === "Escape") {
-                  event.preventDefault();
-                  setEndSuggestions([]);
-                  setActiveEndSuggestionIndex(-1);
-                }
-              }}
-            />
-          </div>
-          {endSuggestions.length ? (
-            <div id="end-listbox" role="listbox" className="absolute left-0 right-0 top-[100%] z-20 mt-1 max-h-52 overflow-auto rounded-lg border border-[var(--border)] bg-surface shadow-lg">
-              {endSuggestions.map((suggestion, index) => (
-                <button
-                  id={`end-option-${index}`}
-                  key={`${suggestion.label}-${suggestion.lat}-${suggestion.lon}`}
-                  type="button"
-                  role="option"
-                  aria-selected={index === activeEndSuggestionIndex}
-                  className={`block w-full px-4 py-2.5 text-left text-sm text-[var(--text-primary)] transition-colors hover:bg-surface-muted ${
-                    index === activeEndSuggestionIndex ? "bg-surface-muted text-[var(--accent)]" : ""
-                  }`}
-                  onMouseEnter={() => setActiveEndSuggestionIndex(index)}
-                  onMouseDown={(event) => {
-                    event.preventDefault();
-                    applyEndSuggestion(suggestion);
-                  }}
-                >
-                  {suggestion.label}
-                  {getLocalizedNameHint(end, suggestion.label) ? (
-                    <span className="ml-2 text-xs text-[var(--text-muted)]">({getLocalizedNameHint(end, suggestion.label)})</span>
-                  ) : null}
-                </button>
-              ))}
-            </div>
-          ) : null}
-          {/* Recent searches: shown when input focused, empty, and no autocomplete results */}
-          {endFocused && !endSuggestions.length && !endPoint && end.trim().length < 2 && recentSearches.length > 0 ? (
-            <div className="absolute left-0 right-0 top-[100%] z-20 mt-1 overflow-auto rounded-lg border border-[var(--border)] bg-surface shadow-lg">
-              <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-2">
-                <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                  {t("recentSearches.title")}
-                </span>
-                <button
-                  type="button"
-                  className="text-xs font-medium text-[var(--accent)] hover:underline"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    clearRecentSearches();
-                    setRecentSearches([]);
-                  }}
-                >
-                  {t("recentSearches.clear")}
-                </button>
-              </div>
-              {recentSearches.map((item) => (
-                <button
-                  key={`recent-end-${item.label}-${item.lat}-${item.lon}`}
-                  type="button"
-                  className="block w-full px-4 py-2.5 text-left text-sm text-[var(--text-primary)] transition-colors hover:bg-surface-muted"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    applyEndSuggestion({ label: item.label, lat: item.lat, lon: item.lon });
-                  }}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          ) : null}
-          {endPoint ? <p className="text-xs font-medium text-[var(--accent-green)]">{t("form.selectedAddressLocked")}</p> : null}
-          {endNeedsApproximateMatchWarning ? (
-            <div className="mt-1 rounded-lg border border-[var(--accent)]/30 bg-[#FDF6EC] px-3 py-1.5 text-xs text-[var(--text-secondary)]">
-              {t("form.approxWarning")}
-              <button type="button" className="ml-2 font-medium underline" onClick={() => { setEndPoint(undefined); setEndSuggestions([]); }}>
-                {t("form.useTypedAddress")}
-              </button>
-            </div>
-          ) : null}
-        </div>
+        <AddressInput
+          marker="B"
+          markerColor="bg-[var(--accent-red)]"
+          labelKey="form.destination"
+          placeholderKey="form.destinationPlaceholder"
+          idPrefix="end"
+          value={end}
+          onChange={(v) => { setEnd(v); setEndPoint(undefined); }}
+          selectedPoint={endPoint}
+          suggestions={endSuggestions}
+          activeIndex={activeEndSuggestionIndex}
+          onActiveIndexChange={setActiveEndSuggestionIndex}
+          onSelectSuggestion={applyEndSuggestion}
+          onClearSuggestions={() => setEndSuggestions([])}
+          onClearPoint={() => { setEndPoint(undefined); setEndSuggestions([]); }}
+          focused={endFocused}
+          onFocusChange={setEndFocused}
+          recentSearches={recentSearches}
+          onClearRecentSearches={() => { clearRecentSearches(); setRecentSearches([]); }}
+          inputClassName={inputClasses}
+        />
 
         {/* ─── Vehicle Type ─── */}
         <fieldset className="grid gap-2">

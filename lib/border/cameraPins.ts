@@ -1,4 +1,5 @@
 import type { CountryCode } from "@/types/vignette";
+import { haversineKm } from "@/lib/utils/geo";
 
 /** Single camera feed entry for a border crossing. */
 export type CameraFeed = {
@@ -35,16 +36,6 @@ const MAX_CAMERAS_PER_CROSSING = 3;
 /** Max km – only show alternative crossings within this distance */
 const MAX_ALTERNATIVE_KM = 80;
 
-function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
 const BORDER_CAMERAS: BorderCameraPin[] = [
   // Croatia ↔ Slovenia – HAK
   // Coordinates sourced from OpenStreetMap / Mapcarta border checkpoint nodes
@@ -54,7 +45,7 @@ const BORDER_CAMERAS: BorderCameraPin[] = [
       { label: "Bregana", url: "https://m.hak.hr/kamera.asp?g=2&k=3", lat: 45.8422, lon: 15.6993 },
       { label: "Macelj", url: "https://m.hak.hr/kamera.asp?g=2&k=16", lat: 46.2660, lon: 15.8693 },
       { label: "Pasjak", url: "https://m.hak.hr/kamera.asp?g=2&k=21", lat: 45.4833, lon: 14.2167 },
-      { label: "Rupa", url: "https://m.hak.hr/kamera.asp?g=2&k=28", lat: 45.4780, lon: 14.2860 },
+      { label: "Rupa", url: "https://m.hak.hr/kamera.asp?g=2&k=28", lat: 45.4701, lon: 14.2735 },
     ],
     countries: ["HR", "SI"],
   },
@@ -78,10 +69,10 @@ const BORDER_CAMERAS: BorderCameraPin[] = [
       { label: "Klek / Neum 1", url: "https://m.hak.hr/kamera.asp?g=2&k=138", lat: 42.9400, lon: 17.5792 },
       { label: "Zaton Doli / Neum 2", url: "https://m.hak.hr/kamera.asp?g=2&k=139", lat: 42.8883, lon: 17.6526 },
       { label: "BIH Ivanica", url: "https://m.hak.hr/kamera.asp?g=2&k=182", lat: 42.6629, lon: 18.1628 },
-      { label: "Brgat", url: "https://m.hak.hr/kamera.asp?g=2&k=208", lat: 42.6522, lon: 18.1591 },
+      { label: "Brgat", url: "https://m.hak.hr/kamera.asp?g=2&k=208", lat: 42.6577, lon: 18.1630 },
       { label: "BIH Crveni Grm", url: "https://m.hak.hr/kamera.asp?g=2&k=181", lat: 43.1740, lon: 17.4749 },
       { label: "Aržano", url: "https://m.hak.hr/kamera.asp?g=2&k=193", lat: 43.5806, lon: 17.0036 },
-      { label: "Vinjani Gornji", url: "https://m.hak.hr/kamera.asp?g=2&k=282", lat: 43.4598, lon: 17.2845 },
+      { label: "Vinjani Gornji", url: "https://m.hak.hr/kamera.asp?g=2&k=282", lat: 43.4820, lon: 17.2358 },
       { label: "Vinjani Donji", url: "https://m.hak.hr/kamera.asp?g=2&k=39", lat: 43.4222, lon: 17.2743 },
       { label: "Slavonski Brod", url: "https://m.hak.hr/kamera.asp?g=2&k=140", lat: 45.1568, lon: 18.0022 },
       { label: "BIH Bosanski Brod", url: "https://m.hak.hr/kamera.asp?g=2&k=184", lat: 45.1462, lon: 18.0059 },
@@ -92,7 +83,7 @@ const BORDER_CAMERAS: BorderCameraPin[] = [
       { label: "BIH Bosanska Gradiška", url: "https://m.hak.hr/kamera.asp?g=2&k=185", lat: 45.1471, lon: 17.2544 },
       { label: "Kamensko", url: "https://m.hak.hr/kamera.asp?g=2&k=192", lat: 43.6119, lon: 16.9733 },
       { label: "BIH Izačić", url: "https://m.hak.hr/kamera.asp?g=2&k=179", lat: 44.8785, lon: 15.7927 },
-      { label: "BIH Prisika", url: "https://m.hak.hr/kamera.asp?g=2&k=180", lat: 44.2368, lon: 17.4160 },
+      { label: "BIH Prisika", url: "https://m.hak.hr/kamera.asp?g=2&k=180", lat: 43.6170, lon: 17.0000 },
       { label: "Maljevac", url: "https://m.hak.hr/kamera.asp?g=2&k=177", lat: 45.1977, lon: 15.7926 },
     ],
     countries: ["HR", "BA"],

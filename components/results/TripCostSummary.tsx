@@ -6,9 +6,11 @@ import { ELECTRICITY_ESTIMATES_LAST_UPDATED } from "@/lib/config/electricityEsti
 import { FUEL_ESTIMATES_LAST_UPDATED } from "@/lib/config/fuelEstimates";
 import { SECTION_TOLL_ESTIMATES_LAST_UPDATED } from "@/lib/config/sectionTollEstimates";
 import type { RouteAnalysisResult } from "@/types/vignette";
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 
 import { COUNTRY_NAMES as COUNTRY_LABELS } from "@/lib/config/countryNames";
+import { getFlagEmoji } from "@/lib/utils/flagEmoji";
+import { buildSummaryText } from "@/lib/utils/shareSummary";
 
 function getOldestUpdateDate(): { label: string; isStale: boolean } {
   const dates = [
@@ -36,15 +38,6 @@ function formatUpdatedDate(value: string): string {
   }).format(parsed);
 }
 
-function getFlagEmoji(code: string): string {
-  if (code.length !== 2) {
-    return "🏳️";
-  }
-  const base = 127397;
-  const chars = code.toUpperCase().split("");
-  return String.fromCodePoint(...chars.map((char) => base + char.charCodeAt(0)));
-}
-
 function formatOriginalPrice(amount: number, currency: string): string {
   if (currency === "EUR") {
     return `${amount.toFixed(2)} EUR`;
@@ -52,7 +45,7 @@ function formatOriginalPrice(amount: number, currency: string): string {
   return `${amount.toLocaleString("en-US")} ${currency}`;
 }
 
-export function TripCostSummary({ result }: { result: RouteAnalysisResult }) {
+export const TripCostSummary = memo(function TripCostSummary({ result }: { result: RouteAnalysisResult }) {
   const { t } = useI18n();
   const estimate = result.tripEstimate;
   const [expanded, setExpanded] = useState(() => {
@@ -63,39 +56,7 @@ export function TripCostSummary({ result }: { result: RouteAnalysisResult }) {
   });
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
 
-  const summaryText = useMemo(() => {
-    if (!estimate) {
-      return "";
-    }
-    const lines = [
-      `Total distance: ${estimate.totalDistanceKm.toFixed(1)} km`,
-      `Vignette estimate: ${estimate.vignetteEstimateEur.toFixed(2)} EUR`,
-      `Section toll estimate: ${estimate.sectionTollEstimateEur.toFixed(2)} EUR`,
-      `Road charges total: ${estimate.totalRoadChargesEur.toFixed(2)} EUR`,
-    ];
-    if (estimate.powertrain === "electric" && estimate.electric) {
-      lines.push(`Energy need: ${estimate.electric.kwhNeeded.toFixed(1)} kWh`);
-      const chargingLow = estimate.electric.estimatedChargingCostEur * 0.85;
-      const chargingHigh = estimate.electric.estimatedChargingCostEur * 1.15;
-      lines.push(`Charging estimate: ~${estimate.electric.estimatedChargingCostEur.toFixed(2)} EUR (range ${chargingLow.toFixed(2)} - ${chargingHigh.toFixed(2)} EUR)`);
-      if (estimate.electric.bestChargeCountryCode) {
-        lines.push(
-          `Best charging country: ${COUNTRY_LABELS[estimate.electric.bestChargeCountryCode]} (${estimate.electric.bestChargePriceEurPerKwh?.toFixed(2)} EUR/kWh)`,
-        );
-      }
-    } else if (estimate.fuel) {
-      lines.push(`Fuel need (${estimate.fuel.assumedFuelType}): ${estimate.fuel.litersNeeded.toFixed(1)} L`);
-      lines.push(`Fuel estimate: ${estimate.fuel.estimatedFuelCostEur.toFixed(2)} EUR`);
-    }
-    if (estimate.fuel?.fuelStrategy) {
-      lines.push(`Fuel strategy: ${estimate.fuel.fuelStrategy}`);
-    } else if (estimate.fuel?.bestTopUpCountryCode) {
-      lines.push(
-        `Cheapest fuel: ${COUNTRY_LABELS[estimate.fuel.bestTopUpCountryCode]} (${estimate.fuel.bestTopUpPriceEurPerLiter?.toFixed(2)} EUR/L). Plan stops based on tank range (${estimate.fuel.estimatedRangePerFullTankKm} km).`,
-      );
-    }
-    return lines.join("\n");
-  }, [estimate]);
+  const summaryText = useMemo(() => buildSummaryText(result), [result]);
   const whatsappShareUrl = `https://wa.me/?text=${encodeURIComponent(summaryText)}`;
   const emailShareUrl = `mailto:?subject=${encodeURIComponent("Trip budget summary")}&body=${encodeURIComponent(summaryText)}`;
 
@@ -347,4 +308,4 @@ export function TripCostSummary({ result }: { result: RouteAnalysisResult }) {
       ) : null}
     </section>
   );
-}
+});

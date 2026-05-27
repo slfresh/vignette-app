@@ -53,7 +53,7 @@ export async function GET(request: Request) {
       incidents,
       available: true,
       tileUrls: {
-        flow: getTrafficFlowTileUrl(apiKey),
+        flow: getTrafficFlowTileUrl(apiKey, "relative-delay"),
         incidents: getTrafficIncidentTileUrl(apiKey),
       },
     });

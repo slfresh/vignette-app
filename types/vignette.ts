@@ -1,3 +1,9 @@
+/** ORS returns coordinates as [longitude, latitude]. */
+export type OrsCoordinate = [lon: number, lat: number];
+
+/** Leaflet expects coordinates as [latitude, longitude]. */
+export type LeafletLatLng = [lat: number, lng: number];
+
 export type CountryCode =
   | "DE"
   | "AT"
@@ -186,6 +192,7 @@ export interface RouteAnalysisResult {
   countries: CountryTravelSummary[];
   sectionTolls: SectionTollNotice[];
   compliance: ComplianceNotice;
+  estimatedDurationSeconds?: number;
   tripEstimate?: TripEstimate;
   tripShield?: TripShieldInsights;
   tripReadiness?: TripReadiness;

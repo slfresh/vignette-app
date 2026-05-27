@@ -18,6 +18,7 @@ export interface AnalysisDraft {
   lineString: RouteLineString;
   countries: Map<CountryCode, CoverageAccumulator>;
   totalDistanceMeters: number;
+  totalDurationSeconds: number;
 }
 
 function distanceMetersBetween(a: [number, number], b: [number, number]): number {
@@ -115,6 +116,7 @@ export function analyzeRouteRequirements(
     },
     countries,
     totalDistanceMeters: feature.properties?.summary?.distance ?? Math.round(computedDistanceMeters),
+    totalDurationSeconds: feature.properties?.summary?.duration ?? 0,
   };
 }
 

@@ -70,8 +70,8 @@ export const HIGHWAY_CAMERAS: HighwayCamera[] = [
 
   // ─── A3 (Bregana – Zagreb – Lipovac / Serbian border)  g=7 ───
   { id: 3,   label: "Bregana",            highway: "A3", lat: 45.8392, lon: 15.7046, url: hakUrl(7, 3) },
-  { id: 229, label: "Samobor",            highway: "A3", lat: 45.8350, lon: 15.7300, url: hakUrl(7, 229) },
-  { id: 231, label: "Jankomir",           highway: "A3", lat: 45.8100, lon: 15.8750, url: hakUrl(7, 231) },
+  { id: 229, label: "Samobor",            highway: "A3", lat: 45.8321, lon: 15.7217, url: hakUrl(7, 229) },
+  { id: 231, label: "Jankomir",           highway: "A3", lat: 45.7974, lon: 15.8767, url: hakUrl(7, 231) },
   { id: 194, label: "Zagreb istok",       highway: "A3", lat: 45.7539, lon: 16.2744, url: hakUrl(7, 194) },
   { id: 212, label: "Ivanić Grad",        highway: "A3", lat: 45.6907, lon: 16.3909, url: hakUrl(7, 212) },
   { id: 114, label: "Kutina",             highway: "A3", lat: 45.4622, lon: 16.7676, url: hakUrl(7, 114) },
@@ -85,8 +85,8 @@ export const HIGHWAY_CAMERAS: HighwayCamera[] = [
   { id: 90,  label: "Lipovac",            highway: "A3", lat: 45.0469, lon: 19.0241, url: hakUrl(7, 90) },
 
   // ─── A4 (Zagreb – Goričan / Hungarian border)  g=12 ───
-  { id: 226, label: "Zagreb istok (A4)",  highway: "A4", lat: 45.8240, lon: 16.0930, url: hakUrl(12, 226) },
-  { id: 225, label: "Sesvete",            highway: "A4", lat: 45.8450, lon: 16.1300, url: hakUrl(12, 225) },
+  { id: 226, label: "Zagreb istok (A4)",  highway: "A4", lat: 45.8046, lon: 16.1324, url: hakUrl(12, 226) },
+  { id: 225, label: "Sesvete",            highway: "A4", lat: 45.8237, lon: 16.1377, url: hakUrl(12, 225) },
   { id: 108, label: "Sveta Helena",       highway: "A4", lat: 45.9205, lon: 16.2737, url: hakUrl(12, 108) },
   { id: 123, label: "Novi Marof",         highway: "A4", lat: 46.1503, lon: 16.3649, url: hakUrl(12, 123) },
   { id: 124, label: "Varaždin",           highway: "A4", lat: 46.2626, lon: 16.3957, url: hakUrl(12, 124) },
@@ -94,25 +94,25 @@ export const HIGHWAY_CAMERAS: HighwayCamera[] = [
   { id: 125, label: "Čakovec",            highway: "A4", lat: 46.3501, lon: 16.5298, url: hakUrl(12, 125) },
 
   // ─── A5 (Beli Manastir – Osijek – Svilaj / Bosnian border)  g=11 ───
-  { id: 270, label: "Beli Manastir",      highway: "A5", lat: 45.7580, lon: 18.6170, url: hakUrl(11, 270) },
-  { id: 96,  label: "Osijek (A5)",        highway: "A5", lat: 45.5460, lon: 18.6050, url: hakUrl(11, 96) },
+  { id: 270, label: "Beli Manastir",      highway: "A5", lat: 45.7545, lon: 18.5774, url: hakUrl(11, 270) },
+  { id: 96,  label: "Osijek (A5)",        highway: "A5", lat: 45.5753, lon: 18.5590, url: hakUrl(11, 96) },
   { id: 95,  label: "Čepin",              highway: "A5", lat: 45.5044, lon: 18.5126, url: hakUrl(11, 95) },
   { id: 99,  label: "Đakovo",             highway: "A5", lat: 45.3244, lon: 18.3847, url: hakUrl(11, 99) },
-  { id: 102, label: "Sredanci",           highway: "A5", lat: 45.1680, lon: 18.3420, url: hakUrl(11, 102) },
-  { id: 245, label: "Svilaj",             highway: "A5", lat: 45.0380, lon: 18.4900, url: hakUrl(11, 245) },
+  { id: 102, label: "Sredanci",           highway: "A5", lat: 45.1533, lon: 18.3126, url: hakUrl(11, 102) },
+  { id: 245, label: "Svilaj",             highway: "A5", lat: 45.1282, lon: 18.3149, url: hakUrl(11, 245) },
 
   // ─── A6 (Rijeka – Bosiljevo)  g=10 ───
-  { id: 65,  label: "Orehovica (Rijeka)", highway: "A6", lat: 45.3480, lon: 14.4330, url: hakUrl(10, 65) },
-  { id: 48,  label: "Delnice",            highway: "A6", lat: 45.3890, lon: 14.7560, url: hakUrl(10, 48) },
+  { id: 65,  label: "Orehovica (Rijeka)", highway: "A6", lat: 45.3344, lon: 14.4748, url: hakUrl(10, 65) },
+  { id: 48,  label: "Delnice",            highway: "A6", lat: 45.3770, lon: 14.7911, url: hakUrl(10, 48) },
   { id: 49,  label: "Vrbovsko",           highway: "A6", lat: 45.3624, lon: 15.0864, url: hakUrl(10, 49) },
 
   // ─── A7 (Rupa – Rijeka)  g=9 ───
-  { id: 28,  label: "Rupa (A7)",          highway: "A7", lat: 45.4780, lon: 14.2860, url: hakUrl(9, 28) },
-  { id: 68,  label: "Jurdani",            highway: "A7", lat: 45.3900, lon: 14.2700, url: hakUrl(9, 68) },
-  { id: 26,  label: "Rijeka (A7)",        highway: "A7", lat: 45.3370, lon: 14.4090, url: hakUrl(9, 26) },
+  { id: 28,  label: "Rupa (A7)",          highway: "A7", lat: 45.4563, lon: 14.2689, url: hakUrl(9, 28) },
+  { id: 68,  label: "Jurdani",            highway: "A7", lat: 45.3957, lon: 14.3010, url: hakUrl(9, 68) },
+  { id: 26,  label: "Rijeka (A7)",        highway: "A7", lat: 45.3436, lon: 14.4048, url: hakUrl(9, 26) },
 
   // ─── A8 (Kanfanar – Matulji / Učka tunnel)  g=6 ───
-  { id: 36,  label: "Učka tunel",         highway: "A8", lat: 45.2930, lon: 14.1780, url: hakUrl(6, 36) },
+  { id: 36,  label: "Učka tunel",         highway: "A8", lat: 45.3176, lon: 14.1730, url: hakUrl(6, 36) },
 
   // ─── A11 (Zagreb – Sisak)  g=15 ───
   { id: 220, label: "Velika Gorica",      highway: "A11", lat: 45.6644, lon: 16.0760, url: hakUrl(15, 220) },

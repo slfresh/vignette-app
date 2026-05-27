@@ -5,19 +5,11 @@
  * so the AI can give specific, data-driven advice about their trip.
  */
 
-import type { RouteAnalysisResult, CountryCode } from "@/types/vignette";
-
-/** Simple country code → name lookup for AI context. */
-const COUNTRY_NAMES: Record<CountryCode, string> = {
-  DE: "Germany", AT: "Austria", CZ: "Czech Republic", SK: "Slovakia",
-  HU: "Hungary", SI: "Slovenia", CH: "Switzerland", RO: "Romania",
-  BG: "Bulgaria", HR: "Croatia", RS: "Serbia", DK: "Denmark",
-  SE: "Sweden", NL: "Netherlands", BE: "Belgium", FR: "France",
-  IT: "Italy", BA: "Bosnia and Herzegovina", ME: "Montenegro",
-  XK: "Kosovo", MK: "North Macedonia", AL: "Albania", PL: "Poland",
-  ES: "Spain", PT: "Portugal", GB: "United Kingdom", IE: "Ireland",
-  TR: "Turkey", GR: "Greece",
-};
+import type { RouteAnalysisResult } from "@/types/vignette";
+import { COUNTRY_NAMES } from "@/lib/config/countryNames";
+import type { RouteWeatherForecast } from "@/lib/weather/openMeteo";
+import type { TrafficIncident } from "@/lib/traffic/tomtom";
+import type { SpeedCamera } from "@/lib/cameras/speedCameras";
 
 /**
  * Build a compact text summary of route results for AI context.
@@ -27,6 +19,14 @@ export function buildRouteContext(result: RouteAnalysisResult): string {
   const lines: string[] = [];
 
   lines.push("=== CURRENT ROUTE DATA ===");
+
+  if (result.estimatedDurationSeconds && result.estimatedDurationSeconds > 0) {
+    const hours = Math.floor(result.estimatedDurationSeconds / 3600);
+    const minutes = Math.round((result.estimatedDurationSeconds % 3600) / 60);
+    const eta = new Date(Date.now() + result.estimatedDurationSeconds * 1000);
+    const etaFormatted = eta.toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+    lines.push(`Estimated driving time: ${hours}h ${minutes}m (arrival ~${etaFormatted})`);
+  }
 
   if (result.tripEstimate) {
     const est = result.tripEstimate;
@@ -89,4 +89,82 @@ export function buildRouteSummaryOneLiner(result: RouteAnalysisResult): string {
   const dist = result.tripEstimate?.totalDistanceKm?.toFixed(0) ?? "?";
   const cost = result.tripEstimate?.totalRoadChargesEur?.toFixed(2) ?? "?";
   return `Route (${dist} km, ~${cost} EUR in tolls) through ${countries}`;
+}
+
+/**
+ * Build an enriched context that includes weather, traffic, and speed camera data
+ * on top of the standard route analysis. Used by the AI Route Briefing feature.
+ */
+export function buildEnrichedRouteContext(options: {
+  result: RouteAnalysisResult;
+  weather?: RouteWeatherForecast;
+  traffic?: TrafficIncident[];
+  cameras?: SpeedCamera[];
+}): string {
+  const { result, weather, traffic, cameras } = options;
+  const lines: string[] = [];
+
+  lines.push(buildRouteContext(result));
+
+  if (weather && weather.points.length > 0) {
+    lines.push("\n=== WEATHER FORECAST ALONG ROUTE ===");
+    for (const pt of weather.points) {
+      lines.push(
+        `  ${pt.label}: ${pt.temperature.toFixed(0)}°C, ${pt.weatherDescription}, wind ${pt.windSpeed.toFixed(0)} km/h (gusts ${pt.windGusts.toFixed(0)} km/h), precipitation ${pt.precipitationProbability}%, visibility ${(pt.visibility / 1000).toFixed(1)} km`,
+      );
+    }
+    if (weather.warnings.length > 0) {
+      lines.push("  WEATHER WARNINGS:");
+      for (const warning of weather.warnings) {
+        lines.push(`    ⚠ ${warning}`);
+      }
+    }
+    lines.push("=== END WEATHER ===");
+  }
+
+  if (traffic && traffic.length > 0) {
+    lines.push("\n=== TRAFFIC INCIDENTS ALONG ROUTE ===");
+    const majorIncidents = traffic.filter((i) => i.severity === "major" || i.severity === "moderate");
+    const minorIncidents = traffic.filter((i) => i.severity === "minor" || i.severity === "undefined");
+    lines.push(`  Total incidents: ${traffic.length} (${majorIncidents.length} major/moderate, ${minorIncidents.length} minor)`);
+    for (const incident of majorIncidents.slice(0, 10)) {
+      const roadLabel = incident.roadName ? ` on ${incident.roadName}` : "";
+      lines.push(`  [${incident.severity.toUpperCase()}]${roadLabel}: ${incident.description}`);
+    }
+    if (majorIncidents.length > 10) {
+      lines.push(`  ... and ${majorIncidents.length - 10} more major/moderate incidents`);
+    }
+    lines.push("=== END TRAFFIC ===");
+  }
+
+  if (cameras && cameras.length > 0) {
+    lines.push("\n=== SPEED CAMERAS ALONG ROUTE ===");
+    lines.push(`  Total speed cameras detected: ${cameras.length}`);
+
+    const byRoad = new Map<string, number>();
+    for (const cam of cameras) {
+      const road = cam.road || "Unknown road";
+      byRoad.set(road, (byRoad.get(road) ?? 0) + 1);
+    }
+    const topRoads = Array.from(byRoad.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+    if (topRoads.length > 0) {
+      lines.push("  Camera clusters (top roads):");
+      for (const [road, count] of topRoads) {
+        lines.push(`    ${road}: ${count} camera(s)`);
+      }
+    }
+
+    const withLimits = cameras.filter((c) => c.speedLimit !== null);
+    if (withLimits.length > 0) {
+      const limits = withLimits.map((c) => c.speedLimit!);
+      const minLimit = Math.min(...limits);
+      lines.push(`  Lowest enforced speed limit: ${minLimit} km/h`);
+    }
+
+    lines.push("=== END SPEED CAMERAS ===");
+  }
+
+  return lines.join("\n");
 }

@@ -14,6 +14,7 @@ export interface OrsFeature {
     };
     summary?: {
       distance?: number;
+      duration?: number;
     };
   };
 }

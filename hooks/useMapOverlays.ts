@@ -23,6 +23,7 @@ interface MapOverlayState {
   showHighwayCameras: boolean;
   showTraffic: boolean;
   trafficTileUrl: string | null;
+  trafficIncidentTileUrl: string | null;
   speedCameras: SpeedCameraData[];
   speedCamerasAvailable: boolean;
   showAiChat: boolean;
@@ -48,6 +49,7 @@ export function useMapOverlays(result: RouteAnalysisResult | null): MapOverlays 
   const [showHighwayCameras, setShowHighwayCameras] = useState(false);
   const [showTraffic, setShowTraffic] = useState(false);
   const [trafficTileUrl, setTrafficTileUrl] = useState<string | null>(null);
+  const [trafficIncidentTileUrl, setTrafficIncidentTileUrl] = useState<string | null>(null);
   const [showAiChat, setShowAiChat] = useState(false);
   const [speedCameras, setSpeedCameras] = useState<SpeedCameraData[]>([]);
   const [speedCamerasAvailable, setSpeedCamerasAvailable] = useState(false);
@@ -104,6 +106,9 @@ export function useMapOverlays(result: RouteAnalysisResult | null): MapOverlays 
         const data = await response.json();
         if (!cancelled && data.available && data.tileUrls?.flow) {
           setTrafficTileUrl(data.tileUrls.flow);
+          if (data.tileUrls.incidents) {
+            setTrafficIncidentTileUrl(data.tileUrls.incidents);
+          }
         }
       } catch {
         // Silently disabled
@@ -124,6 +129,7 @@ export function useMapOverlays(result: RouteAnalysisResult | null): MapOverlays 
     showHighwayCameras,
     showTraffic,
     trafficTileUrl,
+    trafficIncidentTileUrl,
     speedCameras,
     speedCamerasAvailable,
     showAiChat,

@@ -234,6 +234,57 @@ html.theme-dark code {
   overflow-x: auto;
 }
 
+/* ─── AI Route Briefing prose ─── */
+.briefing-markdown h2 {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 1.25em 0 0.5em;
+  padding-bottom: 0.35em;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+}
+.briefing-markdown h2:first-child {
+  margin-top: 0;
+}
+.briefing-markdown h3 {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0.75em 0 0.25em;
+}
+.briefing-markdown p {
+  margin: 0.35em 0;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+.briefing-markdown ul, .briefing-markdown ol {
+  margin: 0.35em 0;
+  padding-left: 1.25em;
+}
+.briefing-markdown li {
+  margin: 0.2em 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.briefing-markdown strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.briefing-markdown a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.briefing-markdown hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0.75em 0;
+}
+
 /* ─── Mobile safe area ─── */
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);

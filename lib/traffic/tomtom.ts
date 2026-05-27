@@ -12,9 +12,15 @@
  */
 
 import { logger } from "@/lib/logging/logger";
+import { haversineKm } from "@/lib/utils/geo";
 
 const TOMTOM_BASE = "https://api.tomtom.com";
 const TOMTOM_TIMEOUT_MS = 10_000;
+
+/** Pre-encoded TomTom fields parameter to avoid issues with literal curly braces in URLs. */
+const INCIDENT_FIELDS = encodeURIComponent(
+  "{incidents{type,geometry{type,coordinates},properties{id,magnitudeOfDelay,events{description,code},from,to,roadNumbers}}}",
+);
 
 /**
  * TomTom traffic flow tile URL template for Leaflet TileLayer.
@@ -97,7 +103,7 @@ export async function fetchTrafficIncidents(options: {
 
   const bbox = `${(lon - lonOffset).toFixed(6)},${(lat - latOffset).toFixed(6)},${(lon + lonOffset).toFixed(6)},${(lat + latOffset).toFixed(6)}`;
 
-  const url = `${TOMTOM_BASE}/traffic/services/5/incidentDetails?key=${apiKey}&bbox=${bbox}&fields={incidents{type,geometry{type,coordinates},properties{id,magnitudeOfDelay,events{description,code},from,to,roadNumbers}}}&language=en-US&timeValidityFilter=present`;
+  const url = `${TOMTOM_BASE}/traffic/services/5/incidentDetails?key=${apiKey}&bbox=${bbox}&fields=${INCIDENT_FIELDS}&language=en-US&timeValidityFilter=present`;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TOMTOM_TIMEOUT_MS);
@@ -155,4 +161,68 @@ export async function fetchTrafficIncidents(options: {
     }
     return [];
   }
+}
+
+/**
+ * Fetch traffic incidents along a route by sampling points every ~200km.
+ * Deduplicates results by incident ID.
+ *
+ * @param routeCoordinates - ORS [lon, lat] coordinate pairs
+ * @param radiusKm - Search radius around each sample point (default 60km)
+ */
+export async function fetchTrafficAlongRoute(
+  routeCoordinates: [number, number][],
+  radiusKm: number = 60,
+): Promise<TrafficIncident[]> {
+  if (routeCoordinates.length === 0) return [];
+
+  const samplePoints = sampleRoutePointsForTraffic(routeCoordinates, 200);
+
+  const results = await Promise.all(
+    samplePoints.map((pt) => fetchTrafficIncidents({ lat: pt.lat, lon: pt.lon, radiusKm })),
+  );
+
+  const seen = new Set<string>();
+  const incidents: TrafficIncident[] = [];
+  for (const batch of results) {
+    for (const inc of batch) {
+      if (!seen.has(inc.id)) {
+        seen.add(inc.id);
+        incidents.push(inc);
+      }
+    }
+  }
+
+  return incidents;
+}
+
+/** Sample evenly-spaced points along a route for traffic queries. */
+function sampleRoutePointsForTraffic(
+  coords: [number, number][],
+  intervalKm: number,
+): Array<{ lat: number; lon: number }> {
+  if (coords.length === 0) return [];
+
+  const points: Array<{ lat: number; lon: number }> = [];
+  points.push({ lat: coords[0][1], lon: coords[0][0] });
+
+  let accumulatedKm = 0;
+  for (let i = 1; i < coords.length; i++) {
+    const [lon1, lat1] = coords[i - 1];
+    const [lon2, lat2] = coords[i];
+    accumulatedKm += haversineKm(lat1, lon1, lat2, lon2);
+
+    if (accumulatedKm >= intervalKm) {
+      points.push({ lat: lat2, lon: lon2 });
+      accumulatedKm = 0;
+    }
+  }
+
+  const last = coords[coords.length - 1];
+  const lastPoint = { lat: last[1], lon: last[0] };
+  if (points.length === 0 || points[points.length - 1].lat !== lastPoint.lat) {
+    points.push(lastPoint);
+  }
+
+  return points;
 }
