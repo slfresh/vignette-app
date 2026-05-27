@@ -3,6 +3,12 @@ import { streamText } from "ai";
 import { checkRateLimit } from "@/lib/security/rateLimit";
 import { SYSTEM_PROMPT } from "@/lib/ai/systemPrompt";
 import { logger } from "@/lib/logging/logger";
+import {
+  aiChatRequestSchema,
+  formatZodErrors,
+  MAX_AI_BODY_BYTES,
+  parseJsonBody,
+} from "@/lib/validation/schemas";
 
 const LM_STUDIO_URL = process.env.LM_STUDIO_URL || "http://localhost:1234/v1";
 const AI_MODEL = process.env.AI_MODEL || "default";
@@ -34,21 +40,36 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = await request.json();
-    const messages = body.messages;
-    const routeContext = body.routeContext ?? "";
-
-    if (!Array.isArray(messages) || messages.length === 0) {
-      return new Response(
-        JSON.stringify({ error: "Messages are required." }),
-        { status: 400, headers: { "Content-Type": "application/json" } },
-      );
+    let body: unknown;
+    try {
+      body = await parseJsonBody(request, MAX_AI_BODY_BYTES);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg === "BODY_TOO_LARGE") {
+        return new Response(JSON.stringify({ error: "Request body too large." }), {
+          status: 413,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ error: "Invalid JSON body." }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    // Build system prompt with optional route context
+    const parsed = aiChatRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ error: formatZodErrors(parsed.error) }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const { messages, routeContext } = parsed.data;
+
     let systemMessage = SYSTEM_PROMPT;
     if (routeContext) {
-      systemMessage += `\n\n${routeContext}`;
+      systemMessage += `\n\n${routeContext.slice(0, 8000)}`;
     }
 
     const provider = createOpenAICompatible({

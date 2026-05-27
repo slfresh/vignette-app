@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildRouteContext, buildRouteSummaryOneLiner } from "@/lib/ai/contextBuilder";
-import type { RouteAnalysisResult, CountryCode } from "@/types/vignette";
+import type { RouteAnalysisResult, CountryCode, RouteLineString } from "@/types/vignette";
 
 const mockResult: RouteAnalysisResult = {
   countries: [
@@ -24,10 +24,20 @@ const mockResult: RouteAnalysisResult = {
     totalRoadChargesEur: 35.5,
     vignetteEstimateEur: 12.5,
     sectionTollEstimateEur: 23.0,
-    fuel: { estimatedFuelCostEur: 45.0 },
+    fuel: {
+      assumedFuelType: "petrol",
+      litersNeeded: 40,
+      averagePricePerLiterEur: 1.5,
+      estimatedFuelCostEur: 45.0,
+      routeCountryFuelPrices: [],
+      estimatedRangePerFullTankKm: 600,
+      suggestedTopUpCountries: [],
+    },
+    powertrain: "combustion",
+    assumptions: [],
     vignetteBreakdown: [],
     sectionTollBreakdown: [],
-  } as any,
+  },
   borderCrossings: [
     { countryCodeFrom: "DE" as CountryCode, countryCodeTo: "AT" as CountryCode, lat: 47.5, lon: 12.1 },
   ],
@@ -41,7 +51,7 @@ const mockResult: RouteAnalysisResult = {
     warnings: [],
   },
   compliance: { official_source: true, informational_only: true, price_last_verified_at: "2026-01-01" },
-  routeGeoJson: { type: "LineString", coordinates: [] } as any,
+  routeGeoJson: { type: "LineString", coordinates: [] } satisfies RouteLineString,
 };
 
 describe("buildRouteContext", () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useMemo, useSyncExternalStore } from "react";
 import { Locale, SUPPORTED_LOCALES, TRANSLATIONS, type TranslationKey } from "@/lib/i18n/translations";
 
 const LOCALE_STORAGE_KEY = "eurodrive-locale";
@@ -13,8 +13,11 @@ interface I18nContextValue {
 
 const I18nContext = createContext<I18nContextValue | null>(null);
 
+const localeListeners = new Set<() => void>();
+
 /** Detect the preferred locale from localStorage or browser settings. */
 function detectClientLocale(): Locale {
+  if (typeof window === "undefined") return "en";
   const stored = window.localStorage.getItem(LOCALE_STORAGE_KEY);
   if (stored && SUPPORTED_LOCALES.some((entry) => entry.code === stored)) {
     return stored as Locale;
@@ -27,31 +30,41 @@ function detectClientLocale(): Locale {
   return "en";
 }
 
-export function I18nProvider({ children }: { children: React.ReactNode }) {
-  // Always start with "en" to match the server render and avoid hydration mismatch.
-  // The real locale is applied in a useEffect after the first client paint.
-  const [locale, setLocaleState] = useState<Locale>("en");
+function subscribeLocale(onStoreChange: () => void) {
+  localeListeners.add(onStoreChange);
+  window.addEventListener("storage", onStoreChange);
+  return () => {
+    localeListeners.delete(onStoreChange);
+    window.removeEventListener("storage", onStoreChange);
+  };
+}
 
-  // After hydration, apply the actual client locale
-  useEffect(() => {
-    const detected = detectClientLocale();
-    if (detected !== "en") {
-      setLocaleState(detected);
-      document.documentElement.lang = detected;
-    }
-  }, []);
+function getClientLocaleSnapshot(): Locale {
+  return detectClientLocale();
+}
+
+function useClientLocale(): Locale {
+  return useSyncExternalStore(
+    subscribeLocale,
+    getClientLocaleSnapshot,
+    () => "en",
+  );
+}
+
+function persistLocale(next: Locale) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(LOCALE_STORAGE_KEY, next);
+  document.cookie = `eurodrive-locale=${next};path=/;max-age=31536000;SameSite=Lax`;
+  document.documentElement.lang = next;
+  localeListeners.forEach((listener) => listener());
+}
+
+export function I18nProvider({ children }: { children: React.ReactNode }) {
+  const locale = useClientLocale();
 
   const value = useMemo<I18nContextValue>(() => {
     const setLocale = (next: Locale) => {
-      setLocaleState(next);
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem(LOCALE_STORAGE_KEY, next);
-        // Also set a cookie so the server can read locale for html lang
-        document.cookie = `eurodrive-locale=${next};path=/;max-age=31536000;SameSite=Lax`;
-      }
-      if (typeof document !== "undefined") {
-        document.documentElement.lang = next;
-      }
+      persistLocale(next);
     };
 
     const t = (key: TranslationKey) => TRANSLATIONS[locale][key] ?? TRANSLATIONS.en[key] ?? key;

@@ -1,6 +1,7 @@
 import { COUNTRY_NAMES as COUNTRY_LABELS } from "@/lib/config/countryNames";
 import type {
   CountryCode,
+  ConfidenceReasonKey,
   RouteAnalysisRequest,
   RouteAnalysisResult,
   TripEstimate,
@@ -30,16 +31,16 @@ export function buildTripReadiness(
       countryNoticeText.includes("crit'air") ||
       countryNoticeText.includes("umwelt") ||
       countryNoticeText.includes("low-emission");
-    const action = country.requiresVignette
-      ? "Buy national vignette before highway entry."
+    const actionKey: TripTimelineEntry["actionKey"] = country.requiresVignette
+      ? "timeline.action.buyVignette"
       : country.requiresSectionToll
-        ? "Prepare section/distance toll payment for this country."
-        : "No national vignette expected on standard passenger routes.";
+        ? "timeline.action.sectionToll"
+        : "timeline.action.noVignette";
     const estimatedCostEur = (vignetteCostByCountry.get(country.countryCode) ?? 0) + (sectionCostByCountry.get(country.countryCode) ?? 0);
     return {
       countryCode: country.countryCode,
       label: COUNTRY_LABELS[country.countryCode],
-      action,
+      actionKey,
       estimatedCostEur: estimatedCostEur > 0 ? Number(estimatedCostEur.toFixed(2)) : undefined,
       requiresVignette: country.requiresVignette,
       requiresSectionToll: country.requiresSectionToll,
@@ -71,50 +72,50 @@ export function buildTripReadiness(
   }
 
   let confidenceScore = 100;
-  const confidenceReasons: string[] = [];
+  const confidenceReasonKeys: ConfidenceReasonKey[] = [];
   if (!request.dateISO) {
     confidenceScore -= 10;
-    confidenceReasons.push("Trip date missing, so time-window toll hints are less precise.");
+    confidenceReasonKeys.push("readiness.confidence.noDate");
   }
   if (!request.powertrainType) {
     confidenceScore -= 8;
-    confidenceReasons.push("Powertrain type missing, fuel/energy estimates use defaults.");
+    confidenceReasonKeys.push("readiness.confidence.noPowertrain");
   }
   if (request.vehicleClass === "VAN_OR_MPV" || request.vehicleClass === "COMMERCIAL_N1") {
     if (request.grossWeightKg === undefined) {
       confidenceScore -= 12;
-      confidenceReasons.push("Gross weight missing for van/camper profile.");
+      confidenceReasonKeys.push("readiness.confidence.noGrossWeight");
     }
     if (request.axles === undefined) {
       confidenceScore -= 8;
-      confidenceReasons.push("Axle count missing for van/camper profile.");
+      confidenceReasonKeys.push("readiness.confidence.noAxles");
     }
   }
   if (request.emissionClass === "UNKNOWN") {
     confidenceScore -= 8;
-    confidenceReasons.push("Emission class unknown, urban-zone checks are conservative.");
+    confidenceReasonKeys.push("readiness.confidence.unknownEmission");
   }
   if (result.countries.length >= 4) {
     confidenceScore -= 6;
-    confidenceReasons.push("Multi-country route complexity increases pricing uncertainty.");
+    confidenceReasonKeys.push("readiness.confidence.multiCountry");
   }
   if (result.countries.some((country) => country.requiresSectionToll) && tripEstimate.sectionTollBreakdown.length === 0) {
     confidenceScore -= 10;
-    confidenceReasons.push("Some section toll segments lack country-specific estimate values.");
+    confidenceReasonKeys.push("readiness.confidence.missingSectionToll");
   }
   confidenceScore = Math.max(0, Math.min(100, confidenceScore));
 
   const confidenceLevel: TripReadiness["confidenceLevel"] =
     confidenceScore >= 80 ? "high" : confidenceScore >= 55 ? "medium" : "low";
 
-  if (!confidenceReasons.length) {
-    confidenceReasons.push("Route profile includes enough details for a strong estimate baseline.");
+  if (!confidenceReasonKeys.length) {
+    confidenceReasonKeys.push("readiness.confidence.strongBaseline");
   }
 
   return {
     confidenceScore,
     confidenceLevel,
-    confidenceReasons,
+    confidenceReasonKeys,
     timeline,
     checklist: Array.from(checklist),
   };

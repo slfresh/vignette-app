@@ -1,0 +1,45 @@
+---
+description: When to use MCP servers for EuroDrive development
+alwaysApply: true
+---
+
+# EuroDrive MCP Server Guide
+
+Use MCP tools proactively when they match the task. Prefer MCP over guessing docs or manual browser steps.
+
+## Built-in (Cursor)
+
+| Tool | Use when |
+|------|----------|
+| **cursor-ide-browser** | Visual QA: map overlays, mobile sheet, timeline→map highlight, dark mode, i18n layout, results page after route calc |
+| **Sentry plugin** | Production/staging errors on `/api/route-analysis`, geocode, AI routes, rate limits |
+
+## Project MCP (`.cursor/mcp.json`)
+
+| Server | Use when | Do NOT use when |
+|--------|----------|-----------------|
+| **context7** | Next.js 16, React Leaflet, Zod 4, AI SDK, Vitest, Playwright API questions | Business logic in this repo — read the code first |
+| **playwright** | Run/debug E2E, reproduce flaky route tests, inspect selectors | Unit tests — use `npm run test` instead |
+| **github** | PRs, CI status, issues, reviewing roadmap branches | Local git only — use shell `git` |
+| **firecrawl** | Verify vignette/toll prices vs `lib/config/pricing2026.ts`, scrape official country sources | Runtime routing — use ORS/TomTom APIs in code |
+| **vercel** | Deploy failures, build logs, env vars, preview URLs, prod CSP issues | Local dev — use `npm run dev` |
+| **upstash** | Debug 429 rate limits, inspect Redis keys for route-analysis/geocode/traffic/AI | App logic changes — edit `lib/security/rateLimit.ts` |
+| **supabase** | Future: saved routes, auth, analytics tables | Not needed until Supabase is wired in |
+
+## Task → MCP mapping
+
+- **UI bug after route calc** → browser, then playwright E2E
+- **Library/API syntax unknown** → context7
+- **CI red / open PR** → github
+- **Official price changed?** → firecrawl + diff `pricing2026.ts`
+- **Works locally, fails deployed** → vercel + sentry
+- **Too many requests / 429** → upstash
+- **New country rule research** → firecrawl or web search, then update `lib/config/countryRules.ts`
+
+## Setup
+
+1. Copy MCP env vars into your shell or `.env.local` (see `.env.example` MCP section)
+2. Restart Cursor after editing `.cursor/mcp.json`
+3. OAuth: click **Needs login** for Vercel and Supabase in Settings → MCP
+
+Never commit API keys. Project config uses `${env:VAR}` only.

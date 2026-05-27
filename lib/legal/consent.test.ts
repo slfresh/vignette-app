@@ -21,15 +21,16 @@ const localStorageMock = {
   }),
 };
 
-const listeners: Record<string, Set<Function>> = {};
+type EventHandler = (event: Event) => void;
+const listeners: Record<string, Set<EventHandler>> = {};
 
 const addEventListenerMock = vi.fn(
-  (event: string, handler: Function) => {
+  (event: string, handler: EventHandler) => {
     (listeners[event] ??= new Set()).add(handler);
   },
 );
 const removeEventListenerMock = vi.fn(
-  (event: string, handler: Function) => {
+  (event: string, handler: EventHandler) => {
     listeners[event]?.delete(handler);
   },
 );

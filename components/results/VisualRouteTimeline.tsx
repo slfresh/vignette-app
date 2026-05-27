@@ -2,36 +2,41 @@
 
 import { memo, useMemo } from "react";
 import { useI18n } from "@/components/i18n/I18nProvider";
+import { ResultSectionHeading } from "@/components/results/ResultSectionHeading";
 import { getCameraPinsForCrossings } from "@/lib/border/cameraPins";
 import { OFFICIAL_LINKS } from "@/lib/config/officialLinks";
-import { COUNTRY_NAMES } from "@/lib/config/countryNames";
+import { getLocalizedCountryName } from "@/lib/i18n/localizedCountryName";
+import { getTimelineActionText, getTimelineCostText } from "@/lib/i18n/routeContent";
 import { getFlagEmoji } from "@/lib/utils/flagEmoji";
-import type { CountryCode, RouteAnalysisResult, TripTimelineEntry } from "@/types/vignette";
+import type { CountryCode, RouteAnalysisResult } from "@/types/vignette";
 
-function getBadgeStyle(type: "free" | "vignette" | "toll" | "urban"): string {
+function getBadgeClass(type: "free" | "vignette" | "toll" | "urban"): string {
   switch (type) {
-    case "free": return "border-emerald-200 bg-emerald-50 text-emerald-800";
-    case "vignette": return "border-amber-200 bg-amber-50 text-amber-800";
-    case "toll": return "border-orange-200 bg-orange-50 text-orange-800";
-    case "urban": return "border-orange-200 bg-orange-50 text-orange-800";
+    case "free":
+      return "badge-free";
+    case "vignette":
+      return "badge-cost";
+    case "toll":
+      return "badge-warn";
+    case "urban":
+      return "badge-warn";
   }
-}
-
-function getFlagCircleBg(code: CountryCode): string {
-  const colors: Partial<Record<CountryCode, string>> = {
-    DE: "bg-zinc-800", AT: "bg-red-700", CZ: "bg-blue-700", SK: "bg-blue-600",
-    HU: "bg-green-700", SI: "bg-blue-600", CH: "bg-red-600", RO: "bg-blue-700",
-    BG: "bg-green-700", HR: "bg-red-600", RS: "bg-blue-700",
-  };
-  return colors[code] ?? "bg-zinc-600";
 }
 
 interface VisualRouteTimelineProps {
   result: RouteAnalysisResult;
+  onCountryHover?: (code: CountryCode | null) => void;
+  onCountryClick?: (code: CountryCode) => void;
+  activeCountryCode?: CountryCode | null;
 }
 
-export const VisualRouteTimeline = memo(function VisualRouteTimeline({ result }: VisualRouteTimelineProps) {
-  const { t } = useI18n();
+export const VisualRouteTimeline = memo(function VisualRouteTimeline({
+  result,
+  onCountryHover,
+  onCountryClick,
+  activeCountryCode,
+}: VisualRouteTimelineProps) {
+  const { t, locale } = useI18n();
   const timeline = result.tripReadiness?.timeline;
 
   const crossingLabelMap = useMemo(() => {
@@ -65,108 +70,127 @@ export const VisualRouteTimeline = memo(function VisualRouteTimeline({ result }:
 
   return (
     <section>
-      <h3 className="mb-4 border-b border-[var(--border)] pb-2 font-[family-name:var(--font-display)] text-xl font-bold text-[var(--text-primary)]">
-        {t("results.routeTimeline")}
-      </h3>
+      <ResultSectionHeading title={t("results.routeTimeline")} subtitle={t("timeline.mapHint")} />
 
       <div className="space-y-0">
         {timeline.map((entry, index) => {
           const prevEntry = index > 0 ? timeline[index - 1] : null;
           const distKm = countryDistances.get(entry.countryCode);
           const officialUrl = OFFICIAL_LINKS[entry.countryCode];
-          const notices = countryNotices.get(entry.countryCode);
+          const notices = locale === "en" ? countryNotices.get(entry.countryCode) : undefined;
           const crossingKey = prevEntry ? `${prevEntry.countryCode}-${entry.countryCode}` : null;
           const crossingLabel = crossingKey ? crossingLabelMap.get(crossingKey) : null;
 
           const badges: Array<{ label: string; type: "free" | "vignette" | "toll" | "urban"; icon: string }> = [];
           if (!entry.requiresVignette && !entry.requiresSectionToll) {
-            badges.push({ label: "No vignette", type: "free", icon: "✓" });
+            badges.push({ label: t("timeline.noVignette"), type: "free", icon: "✓" });
           }
           if (entry.requiresVignette) {
-            badges.push({ label: "Vignette needed", type: "vignette", icon: "🏷" });
+            badges.push({ label: t("timeline.vignetteNeeded"), type: "vignette", icon: "🏷" });
           }
           if (entry.requiresSectionToll) {
-            badges.push({ label: "Section toll", type: "toll", icon: "🛣" });
+            badges.push({ label: t("timeline.sectionToll"), type: "toll", icon: "🛣" });
           }
           if (entry.hasUrbanAccessRisk) {
-            badges.push({ label: "Urban zone risk", type: "urban", icon: "⚠" });
+            badges.push({ label: t("timeline.urbanRisk"), type: "urban", icon: "⚠" });
           }
 
-          const costDisplay = entry.estimatedCostEur !== undefined && entry.estimatedCostEur > 0
-            ? `-${entry.estimatedCostEur.toFixed(2)} EUR`
-            : "No charge";
+          const costDisplay =
+            entry.estimatedCostEur !== undefined && entry.estimatedCostEur > 0
+              ? getTimelineCostText(entry.estimatedCostEur, locale)
+              : t("timeline.noCharge");
+
+          const actionText = entry.actionKey
+            ? getTimelineActionText(entry, locale)
+            : entry.action ?? "";
 
           return (
             <div key={`${entry.countryCode}-${index}`}>
-              {/* Border crossing separator */}
               {prevEntry && (
                 <div className="flex items-center gap-3 py-3">
                   <div className="h-px flex-1 border-t border-dashed border-[var(--border-strong)]" />
                   <span className="whitespace-nowrap rounded-full border border-[var(--border)] bg-surface-muted px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                     {crossingLabel
                       ? `${getFlagEmoji(prevEntry.countryCode)} ${crossingLabel} ${getFlagEmoji(entry.countryCode)}`
-                      : `BORDER CROSSING · ${prevEntry.countryCode} → ${entry.countryCode}`}
+                      : `${t("timeline.borderCrossing")} · ${prevEntry.countryCode} → ${entry.countryCode}`}
                   </span>
                   <div className="h-px flex-1 border-t border-dashed border-[var(--border-strong)]" />
                 </div>
               )}
 
-              {/* Country card */}
-              <div className="flex gap-4 rounded-2xl border border-[var(--border)] bg-surface p-4 shadow-sm sm:p-5">
-                {/* Flag circle */}
-                <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-white ${getFlagCircleBg(entry.countryCode)}`}>
-                  <span className="text-xs font-bold">{entry.countryCode}</span>
+              <div
+                className={`flex cursor-pointer gap-4 rounded-2xl border bg-surface p-4 shadow-sm transition-colors sm:p-5 ${
+                  activeCountryCode === entry.countryCode
+                    ? "border-[var(--accent)] bg-surface-muted ring-1 ring-[var(--accent)]/30"
+                    : "border-[var(--border)] hover:border-[var(--border-strong)]"
+                }`}
+                onMouseEnter={() => onCountryHover?.(entry.countryCode)}
+                onMouseLeave={() => onCountryHover?.(null)}
+                onClick={() => onCountryClick?.(entry.countryCode)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") onCountryClick?.(entry.countryCode);
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label={`${getLocalizedCountryName(entry.countryCode, locale)} — ${t("timeline.mapHint")}`}
+              >
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-surface-muted text-xl">
+                  {getFlagEmoji(entry.countryCode)}
                 </div>
 
-                {/* Content */}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-[family-name:var(--font-display)] text-base font-bold text-[var(--text-primary)]">
-                        <span className="mr-1 text-xs font-semibold uppercase text-[var(--text-muted)]">{entry.countryCode}</span>
-                        {COUNTRY_NAMES[entry.countryCode] ?? entry.countryCode}
+                        <span className="mr-1 text-xs font-semibold uppercase text-[var(--text-muted)]">
+                          {entry.countryCode}
+                        </span>
+                        {getLocalizedCountryName(entry.countryCode, locale)}
                       </p>
                       {distKm !== undefined && distKm > 0 && (
-                        <p className="mt-0.5 text-xs text-[var(--text-muted)]">{distKm} km on highways</p>
+                        <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                          {t("timeline.kmOnHighways").replace("{km}", String(distKm))}
+                        </p>
                       )}
                     </div>
-                    <span className={`whitespace-nowrap rounded-md border px-2.5 py-1 font-[family-name:var(--font-mono)] text-xs font-semibold ${
-                      entry.estimatedCostEur && entry.estimatedCostEur > 0
-                        ? "border-amber-200 bg-amber-50 text-amber-800"
-                        : "border-emerald-200 bg-emerald-50 text-emerald-800"
-                    }`}>
+                    <span
+                      className={`whitespace-nowrap rounded-md border px-2.5 py-1 font-[family-name:var(--font-mono)] text-xs font-semibold ${
+                        entry.estimatedCostEur && entry.estimatedCostEur > 0 ? "badge-cost" : "badge-free"
+                      }`}
+                    >
                       {costDisplay}
                     </span>
                   </div>
 
-                  {/* Description from action text and notices */}
-                  {(entry.action || (notices && notices.length > 0)) && (
+                  {(actionText || (notices && notices.length > 0)) && (
                     <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
-                      {entry.action}
+                      {actionText}
                       {notices?.map((notice, ni) => (
-                        <span key={ni}>{entry.action ? " " : ""}{notice}</span>
+                        <span key={ni}>{actionText ? " " : ""}{notice}</span>
                       ))}
                     </p>
                   )}
 
-                  {/* Badges */}
                   <div className="mt-3 flex flex-wrap gap-2">
                     {badges.map((badge) => (
-                      <span key={badge.label} className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium ${getBadgeStyle(badge.type)}`}>
+                      <span
+                        key={badge.label}
+                        className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium ${getBadgeClass(badge.type)}`}
+                      >
                         {badge.icon} {badge.label}
                       </span>
                     ))}
                   </div>
 
-                  {/* Official buy link */}
                   {entry.requiresVignette && officialUrl && (
                     <a
                       href={officialUrl}
                       target="_blank"
                       rel="noreferrer noopener"
-                      className="mt-2 inline-block text-sm font-medium text-[var(--accent)] hover:underline"
+                      onClick={(e) => e.stopPropagation()}
+                      className="mt-3 inline-flex items-center gap-1 rounded-lg border border-[var(--accent)] bg-[var(--accent)]/10 px-3 py-1.5 text-sm font-semibold text-[var(--accent)] transition hover:bg-[var(--accent)]/20"
                     >
-                      Buy on {new URL(officialUrl).hostname.replace("www.", "")} ↗
+                      {t("timeline.buyOfficial")} ↗
                     </a>
                   )}
                 </div>

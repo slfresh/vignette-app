@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { COUNTRY_GUIDES, type CountryGuide } from "@/lib/content/countryGuides";
+import { COUNTRY_GUIDES } from "@/lib/content/countryGuides";
 
 describe("countryGuides", () => {
   it("COUNTRY_GUIDES is a non-empty array", () => {

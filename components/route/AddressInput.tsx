@@ -4,7 +4,6 @@ import { Search } from "lucide-react";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import type { TranslationKey } from "@/lib/i18n/translations";
 import type { RecentSearch } from "@/lib/storage/recentSearches";
-import { clearRecentSearches } from "@/lib/storage/recentSearches";
 
 interface GeocodeSuggestion {
   label: string;

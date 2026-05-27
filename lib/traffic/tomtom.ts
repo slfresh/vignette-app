@@ -23,13 +23,18 @@ const INCIDENT_FIELDS = encodeURIComponent(
 );
 
 /**
- * TomTom traffic flow tile URL template for Leaflet TileLayer.
- *
- * Style options:
- *  - "absolute": color-coded speed
- *  - "relative": speed relative to free flow
- *  - "relative-delay": only shows delayed segments
+ * TomTom traffic flow tile URL template for Leaflet TileLayer (server-side proxy, no API key).
  */
+export function getTrafficFlowTileProxyUrl(style: string = "relative-delay"): string {
+  return `/api/traffic/tile/flow/${style}/{z}/{x}/{y}`;
+}
+
+/** TomTom traffic incident tile URL template (server-side proxy). */
+export function getTrafficIncidentTileProxyUrl(): string {
+  return `/api/traffic/tile/incidents/{z}/{x}/{y}`;
+}
+
+/** @deprecated Use getTrafficFlowTileProxyUrl — kept for server-side fetch only */
 export function getTrafficFlowTileUrl(apiKey: string, style: string = "relative"): string {
   return `https://api.tomtom.com/traffic/map/4/tile/flow/${style}/{z}/{x}/{y}.png?key=${apiKey}&tileSize=256`;
 }

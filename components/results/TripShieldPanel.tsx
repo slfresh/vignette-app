@@ -3,12 +3,12 @@
 import { memo } from "react";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import type { CountryCode, TripShieldInsights } from "@/types/vignette";
-import { ShieldCheck } from "lucide-react";
+import { ResultSectionHeading } from "@/components/results/ResultSectionHeading";
 
 function badgeColor(positive: boolean, warning: boolean): string {
-  if (warning) return "border-orange-200 bg-orange-50 text-orange-800";
-  if (positive) return "border-emerald-200 bg-emerald-50 text-emerald-800";
-  return "border-blue-200 bg-blue-50 text-blue-800";
+  if (warning) return "badge-warn";
+  if (positive) return "badge-free";
+  return "badge-info";
 }
 
 export const TripShieldPanel = memo(function TripShieldPanel({
@@ -58,12 +58,7 @@ export const TripShieldPanel = memo(function TripShieldPanel({
   return (
     <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-surface shadow-sm">
       <div className="p-5">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="h-5 w-5 text-[var(--text-muted)]" />
-          <h3 className="font-[family-name:var(--font-display)] text-lg font-bold text-[var(--text-primary)]">
-            {t("tripShield.title")}
-          </h3>
-        </div>
+        <ResultSectionHeading title={t("tripShield.title")} />
 
         {badges.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">

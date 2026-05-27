@@ -8,6 +8,12 @@ import { fetchRouteWeather } from "@/lib/weather/openMeteo";
 import { fetchTrafficAlongRoute } from "@/lib/traffic/tomtom";
 import { fetchSpeedCamerasAlongRoute } from "@/lib/cameras/speedCameras";
 import { logger } from "@/lib/logging/logger";
+import {
+  aiBriefingRequestSchema,
+  formatZodErrors,
+  MAX_AI_BODY_BYTES,
+  parseJsonBody,
+} from "@/lib/validation/schemas";
 import type { RouteAnalysisResult } from "@/types/vignette";
 
 const LM_STUDIO_URL = process.env.LM_STUDIO_URL || "http://localhost:1234/v1";
@@ -40,19 +46,35 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = await request.json();
-    const routeCoordinates: [number, number][] = body.routeCoordinates ?? [];
-    const routeResult: RouteAnalysisResult | undefined = body.routeResult;
-    const locale: string = body.locale ?? "en";
-    const LOCALE_NAMES: Record<string, string> = { en: "English", de: "German", tr: "Turkish", pl: "Polish", ro: "Romanian" };
-    const langName = LOCALE_NAMES[locale] ?? "English";
-
-    if (!routeResult || routeCoordinates.length === 0) {
-      return new Response(
-        JSON.stringify({ error: "routeCoordinates and routeResult are required." }),
-        { status: 400, headers: { "Content-Type": "application/json" } },
-      );
+    let body: unknown;
+    try {
+      body = await parseJsonBody(request, MAX_AI_BODY_BYTES);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg === "BODY_TOO_LARGE") {
+        return new Response(JSON.stringify({ error: "Request body too large." }), {
+          status: 413,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ error: "Invalid JSON body." }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
     }
+
+    const parsed = aiBriefingRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ error: formatZodErrors(parsed.error) }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const { routeCoordinates, locale } = parsed.data;
+    const routeResult = (body as { routeResult: RouteAnalysisResult }).routeResult;
+    const LOCALE_NAMES: Record<string, string> = { en: "English", de: "German", tr: "Turkish", pl: "Polish", ro: "Romanian" };
+    const langName = LOCALE_NAMES[locale ?? "en"] ?? "English";
 
     const timer = logger.time("ai-briefing-data-fetch");
 

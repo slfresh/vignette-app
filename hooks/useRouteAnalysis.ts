@@ -30,12 +30,11 @@ interface RouteAnalysisState {
   loading: boolean;
   error: string | null;
   errorCode: string | undefined;
+  calculatedAt: number;
   hoveredCountryCode: CountryCode | null;
   lockedCountryCode: CountryCode | null;
-  expandedCountryCodes: Set<CountryCode>;
   activeCountryCode: CountryCode | null;
   highlightedSegments: RouteAnalysisResult["countries"][0]["routeSegments"];
-  estimatedSavingsEuro: number;
   lastPayload: RoutePayload | null;
 }
 
@@ -43,11 +42,7 @@ interface RouteAnalysisActions {
   submitRoute: (payload: RoutePayload) => Promise<void>;
   setHoveredCountryCode: (code: CountryCode | null) => void;
   setLockedCountryCode: React.Dispatch<React.SetStateAction<CountryCode | null>>;
-  setExpandedCountryCodes: React.Dispatch<React.SetStateAction<Set<CountryCode>>>;
-  handleCountrySummaryClick: (code: CountryCode) => void;
-  handleExpandToggle: (code: CountryCode) => void;
   fetchAlternativeRoute: (avoidTolls: boolean) => Promise<RouteAnalysisResult | null>;
-  countryCardRefs: React.MutableRefObject<Record<string, HTMLElement | null>>;
 }
 
 export type RouteAnalysis = RouteAnalysisState & RouteAnalysisActions;
@@ -64,11 +59,10 @@ export function useRouteAnalysis(
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | undefined>(undefined);
+  const [calculatedAt, setCalculatedAt] = useState(0);
   const [hoveredCountryCode, setHoveredCountryCode] = useState<CountryCode | null>(null);
   const [lockedCountryCode, setLockedCountryCode] = useState<CountryCode | null>(null);
-  const [expandedCountryCodes, setExpandedCountryCodes] = useState<Set<CountryCode>>(new Set());
   const lastPayloadRef = useRef<RoutePayload | null>(null);
-  const countryCardRefs = useRef<Record<string, HTMLElement | null>>({});
   const submitAbortRef = useRef<AbortController | null>(null);
 
   const submitRoute = useCallback(async (payload: RoutePayload) => {
@@ -78,7 +72,6 @@ export function useRouteAnalysis(
     setLoading(true);
     setHoveredCountryCode(null);
     setLockedCountryCode(null);
-    setExpandedCountryCodes(new Set());
     lastPayloadRef.current = payload;
 
     try {
@@ -101,6 +94,7 @@ export function useRouteAnalysis(
 
       const data = (await response.json()) as RouteAnalysisResult;
       setResult(data);
+      setCalculatedAt(Date.now());
 
       const fromParam = encodeURIComponent(payload.start.trim());
       const toParam = encodeURIComponent(payload.end.trim());
@@ -125,27 +119,6 @@ export function useRouteAnalysis(
     return selected?.routeSegments ?? [];
   }, [result, activeCountryCode]);
 
-  const estimatedSavingsEuro = useMemo(() => {
-    if (!result) return 0;
-    return result.countries.filter((c) => c.requiresVignette).length * 8.5;
-  }, [result]);
-
-  const handleCountrySummaryClick = useCallback((code: CountryCode) => {
-    setLockedCountryCode((prev) => (prev === code ? null : code));
-    setExpandedCountryCodes((prev) => new Set(prev).add(code));
-    const el = countryCardRefs.current[code];
-    el?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, []);
-
-  const handleExpandToggle = useCallback((code: CountryCode) => {
-    setExpandedCountryCodes((prev) => {
-      const next = new Set(prev);
-      if (next.has(code)) next.delete(code);
-      else next.add(code);
-      return next;
-    });
-  }, []);
-
   const fetchAlternativeRoute = useCallback(async (avoidTolls: boolean): Promise<RouteAnalysisResult | null> => {
     if (!lastPayloadRef.current) return null;
     const payload = { ...lastPayloadRef.current, avoidTolls };
@@ -167,20 +140,15 @@ export function useRouteAnalysis(
     loading,
     error,
     errorCode,
+    calculatedAt,
     hoveredCountryCode,
     lockedCountryCode,
-    expandedCountryCodes,
     activeCountryCode,
     highlightedSegments,
-    estimatedSavingsEuro,
     lastPayload: lastPayloadRef.current,
     submitRoute,
     setHoveredCountryCode,
     setLockedCountryCode,
-    setExpandedCountryCodes,
-    handleCountrySummaryClick,
-    handleExpandToggle,
     fetchAlternativeRoute,
-    countryCardRefs,
   };
 }

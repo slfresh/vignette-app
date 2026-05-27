@@ -5,13 +5,16 @@ import { useI18n } from "@/components/i18n/I18nProvider";
 import { RouteForm, type RouteFormHandle } from "@/components/route/RouteForm";
 import { useSearchParams, useRouter } from "next/navigation";
 import { ComplianceBadge } from "@/components/results/ComplianceBadge";
-import { BRAND } from "@/lib/config/branding";
-import { COUNTRY_NAMES } from "@/lib/config/countryNames";
+import { BudgetHero } from "@/components/results/BudgetHero";
 import { ResultsSkeleton } from "@/components/results/ResultsSkeleton";
 import { TripShieldPanel } from "@/components/results/TripShieldPanel";
 import { FuelStrategyPanel } from "@/components/results/FuelStrategyPanel";
 import { ShareActions } from "@/components/results/ShareActions";
-import type { CountryCode, RoutePoint } from "@/types/vignette";
+import { StickyTripSummary } from "@/components/results/StickyTripSummary";
+import { VisualRouteTimeline } from "@/components/results/VisualRouteTimeline";
+import type { RoutePoint } from "@/types/vignette";
+import { BRAND } from "@/lib/config/branding";
+import type { TranslationKey } from "@/lib/i18n/translations";
 import { AlertTriangle, MapPin, RefreshCw } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Suspense, useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
@@ -27,9 +30,15 @@ const TripAssistant = dynamic(() => import("@/components/ai/TripAssistant").then
   ssr: false,
 });
 
-import { VisualRouteTimeline } from "@/components/results/VisualRouteTimeline";
-import { AlternativeRoutesPanel } from "@/components/results/AlternativeRoutesPanel";
-import { RouteBriefingCard } from "@/components/results/RouteBriefingCard";
+const RouteBriefingCard = dynamic(
+  () => import("@/components/results/RouteBriefingCard").then((mod) => mod.RouteBriefingCard),
+  { ssr: false },
+);
+
+const AlternativeRoutesPanel = dynamic(
+  () => import("@/components/results/AlternativeRoutesPanel").then((mod) => mod.AlternativeRoutesPanel),
+  { ssr: false },
+);
 
 function safeDecodeParam(value: string | null): string {
   if (!value) return "";
@@ -40,20 +49,20 @@ function safeDecodeParam(value: string | null): string {
   }
 }
 
-function getErrorAdvice(code?: string): string | null {
+function getErrorAdviceKey(code?: string): TranslationKey | null {
   switch (code) {
     case "RATE_LIMITED":
     case "ORS_RATE_LIMITED":
-      return "Too many route requests. Wait 60 seconds without clicking \u2013 repeated clicks reset the cooldown.";
+      return "errors.rateLimited";
     case "NO_ROUTE":
-      return "The routing service could not find a path. Try more specific locations with country names.";
+      return "errors.noRoute";
     case "NO_ROUTE_AVOID_TOLLS":
-      return "There\u2019s no toll-free route available. Disable \u2018Avoid toll roads\u2019 to see alternatives.";
+      return "errors.noRouteAvoidTolls";
     case "TIMEOUT":
-      return "The request took too long. This usually resolves on retry.";
+      return "errors.timeout";
     case "MISSING_API_KEY":
     case "ORS_AUTH_FAILED":
-      return "This is a server configuration issue. Contact the site operator.";
+      return "errors.missingApiKey";
     default:
       return null;
   }
@@ -77,6 +86,8 @@ function HomeContent() {
   const overlays = useMapOverlays(route.result);
 
   const formRef = useRef<RouteFormHandle | null>(null);
+  const resultsRef = useRef<HTMLElement | null>(null);
+  const lastScrolledAt = useRef(0);
   const [formValues, setFormValues] = useState<{
     start: string;
     end: string;
@@ -155,6 +166,24 @@ function HomeContent() {
     }, 600);
     return () => clearTimeout(timer);
   }, [formValues.startPoint, formValues.endPoint]);
+
+  useEffect(() => {
+    if (!route.result || route.calculatedAt <= 0 || route.calculatedAt === lastScrolledAt.current) return;
+    lastScrolledAt.current = route.calculatedAt;
+    const timer = window.setTimeout(() => {
+      resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 150);
+    return () => window.clearTimeout(timer);
+  }, [route.result, route.calculatedAt]);
+
+  const handleCountryClick = useCallback(
+    (code: import("@/types/vignette").CountryCode) => {
+      route.setLockedCountryCode((prev) => (prev === code ? null : code));
+    },
+    [route],
+  );
+
+  const errorAdviceKey = getErrorAdviceKey(route.errorCode);
 
   return (
     <main id="main-content" className="flex min-h-screen w-full flex-col" tabIndex={-1}>
@@ -235,6 +264,17 @@ function HomeContent() {
             <div className={`h-1.5 w-12 rounded-full transition-colors ${mobileSheetOpen ? "bg-[var(--accent)]" : "bg-[var(--border-strong)]"}`} />
           </div>
 
+          {!mobileSheetOpen && route.result?.tripEstimate && (
+            <div className="px-4 pb-2 text-xs text-[var(--text-secondary)] md:hidden">
+              <span className="font-medium">{formValues.start.split(",")[0] || "Start"}</span>
+              <span className="mx-1 text-[var(--text-muted)]">→</span>
+              <span className="font-medium">{formValues.end.split(",")[0] || "End"}</span>
+              <span className="ml-2 font-[family-name:var(--font-mono)] text-[var(--accent)]">
+                {route.result.tripEstimate.totalRoadChargesEur.toFixed(2)} EUR
+              </span>
+            </div>
+          )}
+
           {/* Scrollable on mobile when expanded, normal overflow on desktop */}
           <div
             className={[
@@ -260,7 +300,7 @@ function HomeContent() {
       </div>
 
       {/* ─── Content below map ─── */}
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8 sm:px-6">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6">
         {/* Error display */}
         {route.error ? (
           <div className="rounded-2xl border border-[var(--accent-red)]/20 bg-[#FDF2F0] p-4 shadow-sm" role="alert">
@@ -268,8 +308,8 @@ function HomeContent() {
               <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-[var(--accent-red)]" />
               <div className="min-w-0">
                 <p className="text-sm font-medium text-[var(--accent-red)]">{route.error}</p>
-                {getErrorAdvice(route.errorCode) ? (
-                  <p className="mt-1 text-xs text-[var(--text-muted)]">{getErrorAdvice(route.errorCode)}</p>
+                {errorAdviceKey ? (
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">{t(errorAdviceKey)}</p>
                 ) : null}
                 {(route.errorCode === "TIMEOUT" || route.errorCode === "ORS_RATE_LIMITED" || route.errorCode === "ORS_ERROR") && route.lastPayload ? (
                   <button
@@ -295,140 +335,48 @@ function HomeContent() {
 
         {/* Results section */}
         {route.result ? (
-          <section className="grid gap-8" aria-live="polite">
+          <>
+            <StickyTripSummary estimate={route.result.tripEstimate} anchorId="route-results" />
+            <section ref={resultsRef} id="route-results" className="grid gap-8 scroll-mt-6" aria-live="polite">
+              <BudgetHero
+                result={route.result}
+                startLabel={formValues.start || route.result.tripReadiness?.timeline?.[0]?.label || ""}
+                endLabel={formValues.end || route.result.tripReadiness?.timeline?.[route.result.tripReadiness.timeline.length - 1]?.label || ""}
+                calculatedAt={route.calculatedAt}
+              />
 
-            {/* ── Budget Hero ── */}
-            {(() => {
-              const est = route.result!.tripEstimate;
-              const readiness = route.result!.tripReadiness;
-              const countries = route.result!.countries;
-              const durationSec = route.result!.estimatedDurationSeconds ?? 0;
-              const dateLabel = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date()).toUpperCase();
-              const startLabel = formValues.start || readiness?.timeline?.[0]?.label || countries[0]?.countryCode || "";
-              const endLabel = formValues.end || readiness?.timeline?.[readiness.timeline.length - 1]?.label || countries[countries.length - 1]?.countryCode || "";
-              const confidence = readiness?.confidenceScore ?? 0;
-              const dots = Array.from({ length: 10 }, (_, i) => i < Math.round(confidence / 10));
+              <TripShieldPanel
+                tripShield={route.result.tripShield}
+                routeCountries={route.result.countries.map((c) => c.countryCode)}
+                showBorderCameras={overlays.showBorderCameras}
+                onShowBorderCamerasChange={overlays.setShowBorderCameras}
+                hasBorderCameraData
+              />
 
-              const durationHours = Math.floor(durationSec / 3600);
-              const durationMinutes = Math.round((durationSec % 3600) / 60);
-              const durationLabel = durationSec > 0 ? `${durationHours}h ${durationMinutes}m` : null;
-              const etaDate = durationSec > 0 ? new Date(Date.now() + durationSec * 1000) : null;
-              const etaLabel = etaDate
-                ? new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(etaDate)
-                : null;
-
-              return (
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)]">
-                    {t("results.routeCalculated")} · {dateLabel}
-                  </p>
-                  <h2 className="mt-2 font-[family-name:var(--font-display)] text-3xl font-bold tracking-tight text-[var(--text-primary)] sm:text-4xl">
-                    {t("results.journeyBreakdown").split("{accent}")[0]}
-                    <em className="not-italic text-[var(--accent)]">{t("results.journeyBreakdownAccent")}</em>
-                    <br />{t("results.journeyBreakdown").split("{accent}")[1]}
-                  </h2>
-                  <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
-                    <p className="text-sm text-[var(--text-secondary)]">
-                      {countries.map((c, i) => (
-                        <span key={c.countryCode}>
-                          {i > 0 && <span className="mx-1.5 text-[var(--text-muted)]">→</span>}
-                          <span className="text-xs font-semibold uppercase text-[var(--text-muted)]">{c.countryCode}</span>{" "}
-                          {i === 0 ? startLabel.split(",")[0] : i === countries.length - 1 ? endLabel.split(",")[0] : (COUNTRY_NAMES[c.countryCode] ?? c.countryCode)}
-                        </span>
-                      ))}
-                    </p>
-                    {confidence > 0 && (
-                      <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-surface px-3 py-1 text-xs font-medium text-[var(--text-secondary)]">
-                        {dots.map((filled, i) => (
-                          <span key={i} className={`inline-block h-1.5 w-1.5 rounded-full ${filled ? "bg-[var(--accent-green)]" : "bg-[var(--border-strong)]"}`} />
-                        ))}
-                        <span className="ml-0.5">{confidence}/100 confidence</span>
-                      </span>
-                    )}
-                  </div>
-
-                  {est && (
-                    <div className="mt-6 overflow-hidden rounded-2xl bg-[#1a1a1f] text-white shadow-lg">
-                      <div className="px-6 py-6 sm:px-8 sm:py-8">
-                        <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[var(--accent)]">
-                          {t("results.estimatedRoadCharges")}
-                        </p>
-                        <p className="mt-3 font-[family-name:var(--font-display)] text-5xl font-bold tracking-tight sm:text-6xl">
-                          {est.totalRoadChargesEur.toFixed(2)}
-                          <span className="ml-2 text-2xl font-medium text-white/60">EUR</span>
-                        </p>
-                        <p className="mt-2 text-xs text-white/40">{t("results.referenceOnly")}</p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-px bg-white/5 lg:grid-cols-4">
-                        <div className="px-4 py-3 sm:px-6">
-                          <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Vignettes</p>
-                          <p className="mt-1 font-[family-name:var(--font-mono)] text-base font-semibold text-[var(--accent-green)]">{est.vignetteEstimateEur.toFixed(2)} €</p>
-                        </div>
-                        <div className="px-4 py-3 sm:px-6">
-                          <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Section Tolls</p>
-                          <p className="mt-1 font-[family-name:var(--font-mono)] text-base font-semibold text-[var(--accent-green)]">{est.sectionTollEstimateEur.toFixed(2)} €</p>
-                        </div>
-                        {est.fuel ? (
-                          <div className="px-4 py-3 sm:px-6">
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Fuel Estimate</p>
-                            <p className="mt-1 font-[family-name:var(--font-mono)] text-base font-semibold text-white">{est.fuel.estimatedFuelCostEur.toFixed(2)} €</p>
-                          </div>
-                        ) : est.electric ? (
-                          <div className="px-4 py-3 sm:px-6">
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Charging Est.</p>
-                            <p className="mt-1 font-[family-name:var(--font-mono)] text-base font-semibold text-white">~{est.electric.estimatedChargingCostEur.toFixed(2)} €</p>
-                          </div>
-                        ) : null}
-                        <div className="px-4 py-3 sm:px-6">
-                          <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Total Distance</p>
-                          <p className="mt-1 font-[family-name:var(--font-mono)] text-base font-semibold text-[var(--accent)]">{est.totalDistanceKm.toFixed(0)} km</p>
-                        </div>
-                      </div>
-                      {durationLabel && (
-                        <div className="grid grid-cols-2 gap-px bg-white/5">
-                          <div className="px-4 py-3 sm:px-6">
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">{t("results.drivingTime")}</p>
-                            <p className="mt-1 font-[family-name:var(--font-mono)] text-base font-semibold text-white">{durationLabel}</p>
-                          </div>
-                          {etaLabel && (
-                            <div className="px-4 py-3 sm:px-6">
-                              <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">{t("results.estimatedArrival")}</p>
-                              <p className="mt-1 font-[family-name:var(--font-mono)] text-base font-semibold text-[var(--accent)]">{etaLabel}</p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
+              <div className="grid gap-8 xl:grid-cols-[1.15fr_0.85fr] xl:items-start">
+                <div className="grid gap-8">
+                  <VisualRouteTimeline
+                    result={route.result}
+                    activeCountryCode={route.activeCountryCode}
+                    onCountryHover={route.setHoveredCountryCode}
+                    onCountryClick={handleCountryClick}
+                  />
+                  <AlternativeRoutesPanel
+                    currentResult={route.result}
+                    onRequestAlternative={route.fetchAlternativeRoute}
+                    currentAvoidsTolls={route.result.appliedPreferences?.avoidTolls ?? false}
+                  />
                 </div>
-              );
-            })()}
 
-            <RouteBriefingCard result={route.result} />
-
-            <VisualRouteTimeline result={route.result} />
-
-            <TripShieldPanel
-              tripShield={route.result.tripShield}
-              routeCountries={route.result.countries.map((c) => c.countryCode)}
-              showBorderCameras={overlays.showBorderCameras}
-              onShowBorderCamerasChange={overlays.setShowBorderCameras}
-              hasBorderCameraData
-            />
-
-            <FuelStrategyPanel estimate={route.result.tripEstimate} />
-
-            <AlternativeRoutesPanel
-              currentResult={route.result}
-              onRequestAlternative={route.fetchAlternativeRoute}
-              currentAvoidsTolls={route.result.appliedPreferences?.avoidTolls ?? false}
-            />
-
-            {/* ── Share Actions ── */}
-            <ShareActions result={route.result} onOpenAiChat={() => overlays.setShowAiChat(true)} />
-
-            <ComplianceBadge compliance={route.result.compliance} />
-          </section>
+                <div className="grid gap-8 xl:sticky xl:top-20 xl:self-start">
+                  <RouteBriefingCard result={route.result} />
+                  <FuelStrategyPanel estimate={route.result.tripEstimate} />
+                  <ShareActions result={route.result} onOpenAiChat={() => overlays.setShowAiChat(true)} />
+                  <ComplianceBadge compliance={route.result.compliance} />
+                </div>
+              </div>
+            </section>
+          </>
         ) : null}
       </div>
 
@@ -439,9 +387,9 @@ function HomeContent() {
         type="button"
         onClick={() => overlays.setShowAiChat((prev) => !prev)}
         className="fixed bottom-6 right-6 z-[9999] flex h-14 w-14 items-center justify-center rounded-full bg-[var(--accent)] text-white shadow-lg transition-all hover:bg-[var(--accent-hover)] hover:scale-105 active:scale-95"
-        aria-label={overlays.showAiChat ? "Close AI assistant" : "Open AI trip assistant"}
+        aria-label={overlays.showAiChat ? t("ai.fabClose") : t("ai.fabOpen")}
         aria-expanded={overlays.showAiChat}
-        title="AI Trip Assistant"
+        title={t("results.askAi")}
       >
         {overlays.showAiChat ? (
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

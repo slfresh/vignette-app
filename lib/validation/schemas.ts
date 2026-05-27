@@ -118,3 +118,44 @@ export type ValidatedRouteAnalysisRequest = z.infer<
 export function formatZodErrors(error: z.ZodError): string {
   return error.issues.map((issue) => issue.message).join("; ");
 }
+
+const aiMessageSchema = z.object({
+  role: z.enum(["user", "assistant", "system"]),
+  content: z.string().max(4000),
+});
+
+export const aiChatRequestSchema = z.object({
+  messages: z.array(aiMessageSchema).min(1).max(20),
+  routeContext: z.string().max(8000).optional(),
+});
+
+export const aiBriefingRequestSchema = z.object({
+  routeCoordinates: z
+    .array(z.tuple([z.number().finite(), z.number().finite()]))
+    .min(2)
+    .max(10_000),
+  routeResult: z.object({
+    countries: z.array(z.object({ countryCode: z.string() })).min(1),
+    tripEstimate: z.object({ totalDistanceKm: z.number() }).optional(),
+    tripShield: z.object({ hasBorderCrossing: z.boolean() }).optional(),
+    routeGeoJson: z.object({
+      type: z.literal("LineString"),
+      coordinates: z.array(z.tuple([z.number(), z.number()])),
+    }),
+  }),
+  locale: z.enum(["en", "de", "tr", "pl", "ro"]).optional(),
+});
+
+export const MAX_AI_BODY_BYTES = 10_240;
+
+export async function parseJsonBody(request: Request, maxBytes: number): Promise<unknown> {
+  const contentLength = Number(request.headers.get("content-length") ?? 0);
+  if (contentLength > maxBytes) {
+    throw new Error("BODY_TOO_LARGE");
+  }
+  const text = await request.text();
+  if (text.length > maxBytes) {
+    throw new Error("BODY_TOO_LARGE");
+  }
+  return JSON.parse(text) as unknown;
+}

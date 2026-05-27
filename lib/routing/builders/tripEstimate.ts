@@ -1,4 +1,5 @@
 import { convertCurrencyToEur } from "@/lib/config/exchangeRates";
+import { buildFuelStrategyParams } from "@/lib/i18n/routeContent";
 import {
   CHARGING_PRICE_EUR_PER_KWH,
   getAssumedBatteryCapacityKwh,
@@ -12,9 +13,9 @@ import {
 } from "@/lib/config/fuelEstimates";
 import { PRICING_2026 } from "@/lib/config/pricing2026";
 import { SECTION_TOLL_ESTIMATE_EUR } from "@/lib/config/sectionTollEstimates";
-import { COUNTRY_NAMES as COUNTRY_LABELS } from "@/lib/config/countryNames";
 import type {
   CountryCode,
+  FuelStrategyKey,
   RouteAnalysisRequest,
   RouteAnalysisResult,
   TripEstimate,
@@ -145,7 +146,8 @@ export function buildTripEstimate(
           }
         }
 
-        let fuelStrategy: string | undefined;
+        let fuelStrategyKey: FuelStrategyKey | undefined;
+        let fuelStrategyParams: Record<string, string> | undefined;
         if (cheapest) {
           let cumulativeToStart = 0;
           let cheapestReachable = true;
@@ -159,11 +161,13 @@ export function buildTripEstimate(
             cheapestReachable = false;
           }
 
-          const cheapestLabel = COUNTRY_LABELS[cheapest.countryCode];
           const cheapestPrice = cheapest.priceEurPerLiter.toFixed(2);
 
           if (cheapestReachable) {
-            fuelStrategy = `Cheapest fuel is in ${cheapestLabel} (€${cheapestPrice}/L). You can reach it on your starting tank — fill up fully there.`;
+            ({ fuelStrategyKey, fuelStrategyParams } = buildFuelStrategyParams("fuel.strategyReachable", {
+              countryCode: cheapest.countryCode,
+              price: cheapestPrice,
+            }));
           } else {
             const reachableCountries = routeCountriesWithEstimatedDistance
               .reduce<Array<{ countryCode: CountryCode; cumulativeEndKm: number }>>((acc, seg) => {
@@ -182,11 +186,17 @@ export function buildTripEstimate(
               .sort((a, b) => a.priceEurPerLiter - b.priceEurPerLiter)[0];
 
             if (reachableCheapest && reachableCheapest.countryCode !== cheapest.countryCode) {
-              const interimLabel = COUNTRY_LABELS[reachableCheapest.countryCode];
-              const interimPrice = reachableCheapest.priceEurPerLiter.toFixed(2);
-              fuelStrategy = `Cheapest fuel is in ${cheapestLabel} (€${cheapestPrice}/L), but it's too far to reach on one tank. Fill up enough in ${interimLabel} (€${interimPrice}/L) to reach the border, then fill fully in ${cheapestLabel}.`;
+              ({ fuelStrategyKey, fuelStrategyParams } = buildFuelStrategyParams("fuel.strategyTwoStop", {
+                countryCode: cheapest.countryCode,
+                price: cheapestPrice,
+                interimCountryCode: reachableCheapest.countryCode,
+                interimPrice: reachableCheapest.priceEurPerLiter.toFixed(2),
+              }));
             } else {
-              fuelStrategy = `Cheapest fuel is in ${cheapestLabel} (€${cheapestPrice}/L). Consider a partial fill-up before reaching it to ensure you don't run low.`;
+              ({ fuelStrategyKey, fuelStrategyParams } = buildFuelStrategyParams("fuel.strategyPartial", {
+                countryCode: cheapest.countryCode,
+                price: cheapestPrice,
+              }));
             }
           }
         }
@@ -201,7 +211,8 @@ export function buildTripEstimate(
           routeCountryFuelPrices,
           estimatedRangePerFullTankKm: Number(estimatedRangePerFullTankKm.toFixed(0)),
           suggestedTopUpCountries,
-          fuelStrategy,
+          fuelStrategyKey,
+          fuelStrategyParams,
         };
       })()
     : undefined;

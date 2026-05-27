@@ -17,6 +17,18 @@
   --accent-hover: #B8710A;
   --accent-green: #2E7D52;
   --accent-red: #C0392B;
+  --badge-free-bg: #ecfdf5;
+  --badge-free-text: #065f46;
+  --badge-free-border: #a7f3d0;
+  --badge-cost-bg: #fffbeb;
+  --badge-cost-text: #92400e;
+  --badge-cost-border: #fde68a;
+  --badge-warn-bg: #fff7ed;
+  --badge-warn-text: #9a3412;
+  --badge-warn-border: #fed7aa;
+  --badge-info-bg: #eff6ff;
+  --badge-info-text: #1e40af;
+  --badge-info-border: #bfdbfe;
 }
 
 /* ─── Warm dark palette ─── */
@@ -34,6 +46,18 @@ html.theme-dark {
   --accent-hover: #D4880F;
   --accent-green: #3DAA6A;
   --accent-red: #D95045;
+  --badge-free-bg: #1a2e24;
+  --badge-free-text: #86efac;
+  --badge-free-border: #166534;
+  --badge-cost-bg: #2e2618;
+  --badge-cost-text: #fcd34d;
+  --badge-cost-border: #92400e;
+  --badge-warn-bg: #2e2218;
+  --badge-warn-text: #fdba74;
+  --badge-warn-border: #9a3412;
+  --badge-info-bg: #1a2433;
+  --badge-info-text: #93c5fd;
+  --badge-info-border: #1e40af;
 }
 
 @theme inline {
@@ -106,6 +130,27 @@ html.theme-dark .leaflet-popup-content-wrapper {
 .context-pin {
   background: transparent !important;
   border: none !important;
+}
+
+.badge-free {
+  border-color: var(--badge-free-border);
+  background: var(--badge-free-bg);
+  color: var(--badge-free-text);
+}
+.badge-cost {
+  border-color: var(--badge-cost-border);
+  background: var(--badge-cost-bg);
+  color: var(--badge-cost-text);
+}
+.badge-warn {
+  border-color: var(--badge-warn-border);
+  background: var(--badge-warn-bg);
+  color: var(--badge-warn-text);
+}
+.badge-info {
+  border-color: var(--badge-info-border);
+  background: var(--badge-info-bg);
+  color: var(--badge-info-text);
 }
 
 /* ─── Dark mode code block ─── */

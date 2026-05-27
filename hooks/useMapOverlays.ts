@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { getTrafficFlowTileProxyUrl, getTrafficIncidentTileProxyUrl } from "@/lib/traffic/tomtom";
 import type { RouteAnalysisResult } from "@/types/vignette";
 
 interface SpeedCameraData {
@@ -39,10 +40,6 @@ interface MapOverlayActions {
 
 export type MapOverlays = MapOverlayState & MapOverlayActions;
 
-/**
- * Manages all map overlay toggles, camera data, and traffic tile state.
- * Extracts ~10 useState calls from the main page component.
- */
 export function useMapOverlays(result: RouteAnalysisResult | null): MapOverlays {
   const [showBorderCameras, setShowBorderCameras] = useState(false);
   const [showSpeedCameras, setShowSpeedCameras] = useState(false);
@@ -53,11 +50,10 @@ export function useMapOverlays(result: RouteAnalysisResult | null): MapOverlays 
   const [showAiChat, setShowAiChat] = useState(false);
   const [speedCameras, setSpeedCameras] = useState<SpeedCameraData[]>([]);
   const [speedCamerasAvailable, setSpeedCamerasAvailable] = useState(false);
+  const [speedCamerasProbed, setSpeedCamerasProbed] = useState(false);
 
-  // Fetch speed cameras when route is available and user toggles them on
   useEffect(() => {
-    if (!showSpeedCameras || !result?.routeGeoJson?.coordinates) return;
-    if (speedCameras.length > 0) return;
+    if (!showSpeedCameras || !result?.routeGeoJson?.coordinates || speedCameras.length > 0) return;
 
     let cancelled = false;
     async function loadSpeedCameras() {
@@ -72,53 +68,43 @@ export function useMapOverlays(result: RouteAnalysisResult | null): MapOverlays 
           setSpeedCamerasAvailable(data.available !== false);
         }
       } catch {
-        // Speed cameras are a non-critical feature
+        // non-critical
       }
     }
     loadSpeedCameras();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [showSpeedCameras, result, speedCameras.length]);
 
-  // Check speed camera API availability on mount
-  useEffect(() => {
-    let cancelled = false;
-    async function checkAvailability() {
-      try {
-        const response = await fetch("/api/speed-cameras?lat=48&lon=13&radius=1");
-        const data = await response.json();
-        if (!cancelled) {
-          setSpeedCamerasAvailable(data.available === true);
-        }
-      } catch {
-        // Silently disabled
-      }
+  const probeSpeedCameras = useCallback(async () => {
+    if (speedCamerasProbed) return;
+    setSpeedCamerasProbed(true);
+    try {
+      const response = await fetch("/api/speed-cameras?lat=48&lon=13&radius=1");
+      const data = await response.json();
+      setSpeedCamerasAvailable(data.available === true);
+    } catch {
+      setSpeedCamerasAvailable(false);
     }
-    checkAvailability();
-    return () => { cancelled = true; };
-  }, []);
+  }, [speedCamerasProbed]);
 
-  // Check traffic API availability and get tile URLs
-  useEffect(() => {
-    let cancelled = false;
-    async function checkTraffic() {
-      try {
-        const response = await fetch("/api/traffic?lat=48&lon=13&radius=1");
-        const data = await response.json();
-        if (!cancelled && data.available && data.tileUrls?.flow) {
-          setTrafficTileUrl(data.tileUrls.flow);
-          if (data.tileUrls.incidents) {
-            setTrafficIncidentTileUrl(data.tileUrls.incidents);
-          }
-        }
-      } catch {
-        // Silently disabled
-      }
+  const setShowSpeedCamerasWrapped = useCallback(
+    (v: boolean) => {
+      if (v) void probeSpeedCameras();
+      setShowSpeedCameras(v);
+    },
+    [probeSpeedCameras],
+  );
+
+  const setShowTrafficWrapped = useCallback((v: boolean) => {
+    if (v && !trafficTileUrl) {
+      setTrafficTileUrl(getTrafficFlowTileProxyUrl("relative-delay"));
+      setTrafficIncidentTileUrl(getTrafficIncidentTileProxyUrl());
     }
-    checkTraffic();
-    return () => { cancelled = true; };
-  }, []);
+    setShowTraffic(v);
+  }, [trafficTileUrl]);
 
-  // Reset border cameras when a new route is calculated
   const setShowBorderCamerasWrapped = useCallback((v: boolean) => {
     setShowBorderCameras(v);
   }, []);
@@ -134,9 +120,9 @@ export function useMapOverlays(result: RouteAnalysisResult | null): MapOverlays 
     speedCamerasAvailable,
     showAiChat,
     setShowBorderCameras: setShowBorderCamerasWrapped,
-    setShowSpeedCameras,
+    setShowSpeedCameras: setShowSpeedCamerasWrapped,
     setShowHighwayCameras,
-    setShowTraffic,
+    setShowTraffic: setShowTrafficWrapped,
     setShowAiChat,
   };
 }

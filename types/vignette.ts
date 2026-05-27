@@ -135,7 +135,10 @@ export interface TripEstimate {
     }>;
     estimatedRangePerFullTankKm: number;
     suggestedTopUpCountries: CountryCode[];
-    /** Human-readable fuel strategy that accounts for tank range vs cheapest country */
+    /** i18n key + params — resolved in UI for locale switching */
+    fuelStrategyKey?: FuelStrategyKey;
+    fuelStrategyParams?: Record<string, string>;
+    /** @deprecated Use fuelStrategyKey + fuelStrategyParams */
     fuelStrategy?: string;
   };
   electric?: {
@@ -169,20 +172,44 @@ export interface TripShieldInsights {
   warnings: string[];
 }
 
+export type TimelineActionKey =
+  | "timeline.action.buyVignette"
+  | "timeline.action.sectionToll"
+  | "timeline.action.noVignette";
+
+export type FuelStrategyKey =
+  | "fuel.strategyReachable"
+  | "fuel.strategyTwoStop"
+  | "fuel.strategyPartial";
+
 export interface TripTimelineEntry {
   countryCode: CountryCode;
   label: string;
-  action: string;
+  actionKey: TimelineActionKey;
+  /** @deprecated Resolved in UI via actionKey */
+  action?: string;
   estimatedCostEur?: number;
   requiresVignette: boolean;
   requiresSectionToll: boolean;
   hasUrbanAccessRisk: boolean;
 }
 
+export type ConfidenceReasonKey =
+  | "readiness.confidence.noDate"
+  | "readiness.confidence.noPowertrain"
+  | "readiness.confidence.noGrossWeight"
+  | "readiness.confidence.noAxles"
+  | "readiness.confidence.unknownEmission"
+  | "readiness.confidence.multiCountry"
+  | "readiness.confidence.missingSectionToll"
+  | "readiness.confidence.strongBaseline";
+
 export interface TripReadiness {
   confidenceScore: number;
   confidenceLevel: "high" | "medium" | "low";
-  confidenceReasons: string[];
+  /** @deprecated Use confidenceReasonKeys */
+  confidenceReasons?: string[];
+  confidenceReasonKeys: ConfidenceReasonKey[];
   timeline: TripTimelineEntry[];
   checklist: string[];
 }

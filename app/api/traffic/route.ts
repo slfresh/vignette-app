@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { checkRateLimit } from "@/lib/security/rateLimit";
 import { fetchTrafficIncidents } from "@/lib/traffic/tomtom";
-import { getTrafficFlowTileUrl, getTrafficIncidentTileUrl } from "@/lib/traffic/tomtom";
+import { getTrafficFlowTileProxyUrl, getTrafficIncidentTileProxyUrl } from "@/lib/traffic/tomtom";
 import { logger } from "@/lib/logging/logger";
 
 /**
@@ -53,8 +53,8 @@ export async function GET(request: Request) {
       incidents,
       available: true,
       tileUrls: {
-        flow: getTrafficFlowTileUrl(apiKey, "relative-delay"),
-        incidents: getTrafficIncidentTileUrl(apiKey),
+        flow: getTrafficFlowTileProxyUrl("relative-delay"),
+        incidents: getTrafficIncidentTileProxyUrl(),
       },
     });
   } catch (error) {
