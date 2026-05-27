@@ -92,14 +92,12 @@ export function analyzeRouteRequirements(
         continue;
       }
 
-      const dx = next[0] - current[0];
-      const dy = next[1] - current[1];
-      const roughMeters = Math.sqrt(dx * dx + dy * dy) * 111_000;
+      const edgeMeters = distanceMetersBetween(current, next);
 
       const category = getCategoryForSegment(idx, wayRanges);
       if (HIGHWAY_CATEGORIES.has(category)) {
         existing.hasHighway = true;
-        existing.highwayDistanceMeters += roughMeters;
+        existing.highwayDistanceMeters += edgeMeters;
       }
       if (TOLLWAY_CATEGORIES.has(category)) {
         existing.hasTollway = true;
@@ -120,19 +118,37 @@ export function analyzeRouteRequirements(
   };
 }
 
+/** Merge overlapping or touching index ranges so map polylines share boundary vertices. */
+function mergeAdjacentRanges(ranges: Array<{ start: number; end: number }>): Array<{ start: number; end: number }> {
+  if (!ranges.length) return [];
+  const sorted = [...ranges].sort((a, b) => a.start - b.start);
+  const merged: Array<{ start: number; end: number }> = [{ start: sorted[0].start, end: sorted[0].end }];
+  for (let i = 1; i < sorted.length; i += 1) {
+    const prev = merged[merged.length - 1];
+    const cur = sorted[i];
+    if (cur.start <= prev.end) {
+      prev.end = Math.max(prev.end, cur.end);
+    } else {
+      merged.push({ start: cur.start, end: cur.end });
+    }
+  }
+  return merged;
+}
+
 export function mapCountrySummaries(
   draft: AnalysisDraft,
   decisionResolver: (countryCode: CountryCode, hasHighway: boolean, hasTollway: boolean) => Omit<CountryTravelSummary, "countryCode" | "highwayDistanceMeters">,
 ): CountryTravelSummary[] {
   return Array.from(draft.countries.entries()).map(([countryCode, data]) => {
     const decision = decisionResolver(countryCode, data.hasHighway, data.hasTollway);
+    const mergedRanges = mergeAdjacentRanges(data.segmentRanges);
     return {
       countryCode,
       highwayDistanceMeters: Math.round(data.highwayDistanceMeters),
       requiresVignette: decision.requiresVignette,
       requiresSectionToll: decision.requiresSectionToll,
       notices: decision.notices,
-      routeSegments: data.segmentRanges
+      routeSegments: mergedRanges
         .map((range) => {
           const segmentCoordinates = draft.lineString.coordinates.slice(range.start, range.end + 1);
           if (segmentCoordinates.length < 2) {

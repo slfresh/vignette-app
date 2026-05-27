@@ -208,6 +208,7 @@ export type TranslationKey =
   | "results.compareRoutes"
   | "results.fuelStrategy"
   | "results.copySummary"
+  | "results.copyLink"
   | "results.shareWhatsApp"
   | "results.shareEmail"
   | "results.askAi"
@@ -504,6 +505,7 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "results.compareRoutes": "Compare Routes",
     "results.fuelStrategy": "Fuel Strategy",
     "results.copySummary": "Copy summary",
+    "results.copyLink": "Copy link",
     "results.shareWhatsApp": "Share WhatsApp",
     "results.shareEmail": "Share Email",
     "results.askAi": "Ask AI assistant",
@@ -799,6 +801,7 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "results.compareRoutes": "Routen vergleichen",
     "results.fuelStrategy": "Tankstrategie",
     "results.copySummary": "Zusammenfassung kopieren",
+    "results.copyLink": "Link kopieren",
     "results.shareWhatsApp": "Per WhatsApp teilen",
     "results.shareEmail": "Per E-Mail teilen",
     "results.askAi": "KI-Assistent fragen",
@@ -1094,6 +1097,7 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "results.compareRoutes": "Rotaları Karşılaştır",
     "results.fuelStrategy": "Yakıt Stratejisi",
     "results.copySummary": "Özeti kopyala",
+    "results.copyLink": "Baglantiyi kopyala",
     "results.shareWhatsApp": "WhatsApp ile paylaş",
     "results.shareEmail": "E-posta ile paylaş",
     "results.askAi": "Yapay zeka asistanına sor",
@@ -1389,6 +1393,7 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "results.compareRoutes": "Porównaj trasy",
     "results.fuelStrategy": "Strategia paliwowa",
     "results.copySummary": "Kopiuj podsumowanie",
+    "results.copyLink": "Kopiuj link",
     "results.shareWhatsApp": "Udostępnij WhatsApp",
     "results.shareEmail": "Udostępnij e-mail",
     "results.askAi": "Zapytaj asystenta AI",
@@ -1684,6 +1689,7 @@ export const TRANSLATIONS: Record<Locale, Partial<Record<TranslationKey, string>
     "results.compareRoutes": "Compară rutele",
     "results.fuelStrategy": "Strategie combustibil",
     "results.copySummary": "Copiază rezumatul",
+    "results.copyLink": "Copiază linkul",
     "results.shareWhatsApp": "Distribuie WhatsApp",
     "results.shareEmail": "Distribuie Email",
     "results.askAi": "Întreabă asistentul AI",

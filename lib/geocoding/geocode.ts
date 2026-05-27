@@ -10,6 +10,7 @@
  */
 
 import { geocodeAddressCache } from "@/lib/cache/geocodeCache";
+import { assertWithinEuropeBounds, OutsideEuropeBoundsError } from "@/lib/utils/geo";
 import type { RoutePoint } from "@/types/vignette";
 
 /* ─── Constants ─── */
@@ -18,6 +19,11 @@ const PHOTON_GEOCODE_URL = "https://photon.komoot.io/api/";
 const NOMINATIM_URL = "https://nominatim.openstreetmap.org/search";
 const GEOCODE_TIMEOUT_MS = 8_000;
 const DEFAULT_CONTACT_EMAIL = "support@example.com";
+
+function validateGeocodedPoint(point: RoutePoint, query: string): RoutePoint {
+  assertWithinEuropeBounds(point, query.trim());
+  return point;
+}
 
 /* ─── Helpers ─── */
 
@@ -134,29 +140,32 @@ export async function geocodeAddress(query: string): Promise<RoutePoint> {
   // Tier 1: ORS (if API key available)
   if (orsApiKey) {
     try {
-      const point = await geocodeWithOrs(query, orsApiKey);
+      const point = validateGeocodedPoint(await geocodeWithOrs(query, orsApiKey), query);
       geocodeAddressCache.set(cacheKey, point);
       return point;
-    } catch {
+    } catch (error) {
+      if (error instanceof OutsideEuropeBoundsError) throw error;
       // Fall through to next provider
     }
   }
 
   // Tier 2: Photon
   try {
-    const point = await geocodeWithPhoton(query);
+    const point = validateGeocodedPoint(await geocodeWithPhoton(query), query);
     geocodeAddressCache.set(cacheKey, point);
     return point;
-  } catch {
+  } catch (error) {
+    if (error instanceof OutsideEuropeBoundsError) throw error;
     // Fall through to next provider
   }
 
   // Tier 3: Nominatim
   try {
-    const point = await geocodeWithNominatim(query);
+    const point = validateGeocodedPoint(await geocodeWithNominatim(query), query);
     geocodeAddressCache.set(cacheKey, point);
     return point;
-  } catch {
+  } catch (error) {
+    if (error instanceof OutsideEuropeBoundsError) throw error;
     throw new Error(
       `Could not resolve "${query}". Check spelling or try a more specific name (e.g., "Lyon, France").`,
     );
@@ -173,6 +182,9 @@ export async function geocodeAddress(query: string): Promise<RoutePoint> {
  */
 export async function resolveLocation(input: string): Promise<RoutePoint> {
   const coordinatePoint = parseCoordinates(input);
-  if (coordinatePoint) return coordinatePoint;
+  if (coordinatePoint) {
+    assertWithinEuropeBounds(coordinatePoint, input.trim());
+    return coordinatePoint;
+  }
   return geocodeAddress(input);
 }

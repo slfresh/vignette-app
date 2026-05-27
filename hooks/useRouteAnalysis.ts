@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
+import { buildRouteSearchParams } from "@/lib/utils/routeUrl";
 import type {
   CountryCode,
   EmissionClass,
@@ -96,11 +97,15 @@ export function useRouteAnalysis(
       setResult(data);
       setCalculatedAt(Date.now());
 
-      const fromParam = encodeURIComponent(payload.start.trim());
-      const toParam = encodeURIComponent(payload.end.trim());
-      const newParams = new URLSearchParams(searchParams.toString());
-      newParams.set("from", fromParam);
-      newParams.set("to", toParam);
+      const newParams = buildRouteSearchParams(
+        {
+          start: payload.start,
+          end: payload.end,
+          startPoint: payload.startPoint,
+          endPoint: payload.endPoint,
+        },
+        searchParams,
+      );
       router.replace(`/?${newParams.toString()}`, { scroll: false });
     } catch (submitError) {
       const message = submitError instanceof Error ? submitError.message : "Unexpected error occurred.";

@@ -7,6 +7,7 @@ import type { TranslationKey } from "@/lib/i18n/translations";
 import type { EmissionClass, PowertrainType, RoutePoint, VehicleClass } from "@/types/vignette";
 import { getRecentSearches, addRecentSearch, clearRecentSearches, type RecentSearch } from "@/lib/storage/recentSearches";
 import { AddressInput } from "@/components/route/AddressInput";
+import { useAutocomplete } from "@/hooks/useAutocomplete";
 
 interface GeocodeSuggestion {
   label: string;
@@ -35,6 +36,8 @@ interface RouteFormProps {
   /** Pre-fill from URL (e.g. shared link) */
   initialStart?: string;
   initialEnd?: string;
+  initialStartPoint?: RoutePoint;
+  initialEndPoint?: RoutePoint;
   /** Disable submit while parent is loading (e.g. auto-submit from URL) */
   isSubmitting?: boolean;
   /** Called when start/end or points change – used to sync with map picker markers */
@@ -46,19 +49,37 @@ export type RouteFormHandle = {
   setEndFromMap: (label: string, point: RoutePoint) => void;
   /** Programmatically submit the form (used by auto-calculate). */
   submit: () => void;
+  /** True while user is editing advanced options or autocomplete — suppress auto-calc. */
+  shouldSuppressAutoCalc: () => boolean;
 };
 
 export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function RouteForm(
-  { onSubmit, initialStart = "", initialEnd = "", isSubmitting = false, onValuesChange }: RouteFormProps,
+  {
+    onSubmit,
+    initialStart = "",
+    initialEnd = "",
+    initialStartPoint,
+    initialEndPoint,
+    isSubmitting = false,
+    onValuesChange,
+  }: RouteFormProps,
   ref,
 ) {
   const { t } = useI18n();
   const [start, setStart] = useState(initialStart);
   const [end, setEnd] = useState(initialEnd);
-  const [startPoint, setStartPoint] = useState<RoutePoint | undefined>(undefined);
-  const [endPoint, setEndPoint] = useState<RoutePoint | undefined>(undefined);
-  const [startSuggestions, setStartSuggestions] = useState<GeocodeSuggestion[]>([]);
-  const [endSuggestions, setEndSuggestions] = useState<GeocodeSuggestion[]>([]);
+  const [startPoint, setStartPoint] = useState<RoutePoint | undefined>(initialStartPoint);
+  const [endPoint, setEndPoint] = useState<RoutePoint | undefined>(initialEndPoint);
+  const {
+    suggestions: startSuggestions,
+    setSuggestions: setStartSuggestions,
+    isLoading: startSuggestionsLoading,
+  } = useAutocomplete(start, startPoint);
+  const {
+    suggestions: endSuggestions,
+    setSuggestions: setEndSuggestions,
+    isLoading: endSuggestionsLoading,
+  } = useAutocomplete(end, endPoint);
   const [activeStartSuggestionIndex, setActiveStartSuggestionIndex] = useState(-1);
   const [activeEndSuggestionIndex, setActiveEndSuggestionIndex] = useState(-1);
   const [dateISO, setDateISO] = useState("");
@@ -79,6 +100,16 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
   const [endFocused, setEndFocused] = useState(false);
   const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
   const isMotorcycle = vehicleType === "motorcycle";
+  const suppressAutoCalcRef = useRef(false);
+
+  useEffect(() => {
+    suppressAutoCalcRef.current =
+      showAdvanced ||
+      startFocused ||
+      endFocused ||
+      startSuggestions.length > 0 ||
+      endSuggestions.length > 0;
+  }, [showAdvanced, startFocused, endFocused, startSuggestions.length, endSuggestions.length]);
 
   function toVehicleClass(value: "car" | "motorcycle" | "camper"): VehicleClass {
     if (value === "motorcycle") {
@@ -157,6 +188,7 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
     submit: () => {
       formElRef.current?.requestSubmit();
     },
+    shouldSuppressAutoCalc: () => suppressAutoCalcRef.current,
   }));
 
   useEffect(() => {
@@ -164,78 +196,8 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
   }, [start, end, startPoint, endPoint, onValuesChange]);
 
   useEffect(() => {
-    if (startPoint) {
-      setStartSuggestions([]);
-      return;
-    }
-    const query = start.trim();
-    if (query.length < 2) {
-      setStartSuggestions([]);
-      return;
-    }
-
-    const abortController = new AbortController();
-    const timeoutId = setTimeout(async () => {
-      try {
-        const response = await fetch(`/api/geocode/suggest?q=${encodeURIComponent(query)}`, {
-          signal: abortController.signal,
-        });
-        if (!response.ok) {
-          return;
-        }
-        const body = (await response.json()) as { suggestions?: GeocodeSuggestion[] };
-        setStartSuggestions(body.suggestions ?? []);
-      } catch {
-        if (!abortController.signal.aborted) {
-          setStartSuggestions([]);
-        }
-      }
-    }, 250);
-
-    return () => {
-      clearTimeout(timeoutId);
-      abortController.abort();
-    };
-  }, [start, startPoint]);
-
-  useEffect(() => {
     setActiveStartSuggestionIndex(-1);
   }, [startSuggestions]);
-
-  useEffect(() => {
-    if (endPoint) {
-      setEndSuggestions([]);
-      return;
-    }
-    const query = end.trim();
-    if (query.length < 2) {
-      setEndSuggestions([]);
-      return;
-    }
-
-    const abortController = new AbortController();
-    const timeoutId = setTimeout(async () => {
-      try {
-        const response = await fetch(`/api/geocode/suggest?q=${encodeURIComponent(query)}`, {
-          signal: abortController.signal,
-        });
-        if (!response.ok) {
-          return;
-        }
-        const body = (await response.json()) as { suggestions?: GeocodeSuggestion[] };
-        setEndSuggestions(body.suggestions ?? []);
-      } catch {
-        if (!abortController.signal.aborted) {
-          setEndSuggestions([]);
-        }
-      }
-    }, 250);
-
-    return () => {
-      clearTimeout(timeoutId);
-      abortController.abort();
-    };
-  }, [end, endPoint]);
 
   useEffect(() => {
     setActiveEndSuggestionIndex(-1);
@@ -340,6 +302,7 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
           recentSearches={recentSearches}
           onClearRecentSearches={() => { clearRecentSearches(); setRecentSearches([]); }}
           inputClassName={inputClasses}
+          isLoading={startSuggestionsLoading}
         />
 
         {/* ─── Destination ─── */}
@@ -363,6 +326,7 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
           recentSearches={recentSearches}
           onClearRecentSearches={() => { clearRecentSearches(); setRecentSearches([]); }}
           inputClassName={inputClasses}
+          isLoading={endSuggestionsLoading}
         />
 
         {/* ─── Vehicle Type ─── */}
@@ -471,63 +435,65 @@ export const RouteForm = forwardRef<RouteFormHandle, RouteFormProps>(function Ro
               ) : null}
             </div>
 
-            {!isMotorcycle ? (
-              <>
-                <div className="grid gap-4 sm:grid-cols-3">
+            <div
+              className={`grid gap-4 overflow-hidden transition-all duration-200 ${
+                isMotorcycle ? "max-h-0 opacity-0" : "max-h-96 opacity-100"
+              }`}
+            >
+              <div className="grid gap-4 sm:grid-cols-3">
+                <label className="grid gap-1.5 text-sm">
+                  <span className="font-medium text-[var(--text-primary)]">{t("form.grossWeight")}</span>
+                  <input
+                    type="number"
+                    min={200}
+                    max={60000}
+                    className={advancedInputClasses}
+                    placeholder={t("form.optional")}
+                    value={grossWeightKgInput}
+                    onChange={(event) => setGrossWeightKgInput(event.target.value)}
+                  />
+                </label>
+
+                <label className="grid gap-1.5 text-sm">
+                  <span className="font-medium text-[var(--text-primary)]">{t("form.axles")}</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={8}
+                    className={advancedInputClasses}
+                    value={axles}
+                    onChange={(event) => setAxles(Number(event.target.value))}
+                  />
+                </label>
+
+                {powertrainType === "ELECTRIC" ? (
                   <label className="grid gap-1.5 text-sm">
-                    <span className="font-medium text-[var(--text-primary)]">{t("form.grossWeight")}</span>
+                    <span className="font-medium text-[var(--text-primary)]">{t("form.emissionClass")}</span>
                     <input
-                      type="number"
-                      min={200}
-                      max={60000}
-                      className={advancedInputClasses}
-                      placeholder={t("form.optional")}
-                      value={grossWeightKgInput}
-                      onChange={(event) => setGrossWeightKgInput(event.target.value)}
+                      className="rounded-lg border border-[var(--border)] bg-surface-muted px-3 py-2.5 text-sm text-[var(--text-muted)]"
+                      value={t("form.emissionClass.auto")}
+                      readOnly
                     />
                   </label>
-
+                ) : (
                   <label className="grid gap-1.5 text-sm">
-                    <span className="font-medium text-[var(--text-primary)]">{t("form.axles")}</span>
-                    <input
-                      type="number"
-                      min={1}
-                      max={8}
+                    <span className="font-medium text-[var(--text-primary)]">{t("form.emissionClass")}</span>
+                    <select
                       className={advancedInputClasses}
-                      value={axles}
-                      onChange={(event) => setAxles(Number(event.target.value))}
-                    />
+                      value={emissionClass}
+                      onChange={(event) => setEmissionClass(event.target.value as EmissionClass)}
+                    >
+                      <option value="UNKNOWN">{t("form.emission.unknown")}</option>
+                      <option value="EURO_6">{t("form.emission.euro6")}</option>
+                      <option value="EURO_5_OR_LOWER">{t("form.emission.euro5")}</option>
+                    </select>
                   </label>
-
-                  {powertrainType === "ELECTRIC" ? (
-                    <label className="grid gap-1.5 text-sm">
-                      <span className="font-medium text-[var(--text-primary)]">{t("form.emissionClass")}</span>
-                      <input
-                        className="rounded-lg border border-[var(--border)] bg-surface-muted px-3 py-2.5 text-sm text-[var(--text-muted)]"
-                        value={t("form.emissionClass.auto")}
-                        readOnly
-                      />
-                    </label>
-                  ) : (
-                    <label className="grid gap-1.5 text-sm">
-                      <span className="font-medium text-[var(--text-primary)]">{t("form.emissionClass")}</span>
-                      <select
-                        className={advancedInputClasses}
-                        value={emissionClass}
-                        onChange={(event) => setEmissionClass(event.target.value as EmissionClass)}
-                      >
-                        <option value="UNKNOWN">{t("form.emission.unknown")}</option>
-                        <option value="EURO_6">{t("form.emission.euro6")}</option>
-                        <option value="EURO_5_OR_LOWER">{t("form.emission.euro5")}</option>
-                      </select>
-                    </label>
-                  )}
-                </div>
-                <p className="text-xs text-[var(--text-muted)]">
-                  {t("form.profileCheck")}
-                </p>
-              </>
-            ) : null}
+                )}
+              </div>
+              <p className="text-xs text-[var(--text-muted)]">
+                {t("form.profileCheck")}
+              </p>
+            </div>
 
             <label className="grid gap-1.5 text-sm">
               <span className="font-medium text-[var(--text-primary)]">{t("form.channelCrossing")}</span>

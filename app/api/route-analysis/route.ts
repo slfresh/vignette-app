@@ -6,6 +6,8 @@ import {
   formatZodErrors,
 } from "@/lib/validation/schemas";
 import { normalizePoint, resolveLocation } from "@/lib/geocoding/geocode";
+import { assertWithinEuropeBounds, OutsideEuropeBoundsError } from "@/lib/utils/geo";
+import type { RoutePoint } from "@/types/vignette";
 import type { OrsDirectionsResponse } from "@/lib/routing/orsTypes";
 import { NextResponse } from "next/server";
 
@@ -78,10 +80,51 @@ export async function POST(request: Request) {
     const providedStart = normalizePoint(body.startPoint);
     const providedEnd = normalizePoint(body.endPoint);
 
-    const [startPoint, endPoint] = await Promise.all([
+    const [startResult, endResult] = await Promise.allSettled([
       providedStart ? Promise.resolve(providedStart) : resolveLocation(body.start.trim()),
       providedEnd ? Promise.resolve(providedEnd) : resolveLocation(body.end.trim()),
     ]);
+
+    const geocodeErrors: string[] = [];
+    let startPoint: RoutePoint | undefined;
+    let endPoint: RoutePoint | undefined;
+
+    if (startResult.status === "fulfilled") {
+      startPoint = startResult.value;
+    } else {
+      geocodeErrors.push(
+        `Start: ${startResult.reason instanceof Error ? startResult.reason.message : "Could not resolve start location."}`,
+      );
+    }
+
+    if (endResult.status === "fulfilled") {
+      endPoint = endResult.value;
+    } else {
+      geocodeErrors.push(
+        `Destination: ${endResult.reason instanceof Error ? endResult.reason.message : "Could not resolve destination."}`,
+      );
+    }
+
+    if (geocodeErrors.length > 0) {
+      const hasBoundsError =
+        (startResult.status === "rejected" && startResult.reason instanceof OutsideEuropeBoundsError) ||
+        (endResult.status === "rejected" && endResult.reason instanceof OutsideEuropeBoundsError);
+      return jsonError(geocodeErrors.join(" "), 400, hasBoundsError ? "OUTSIDE_SERVICE_AREA" : "GEOCODE_ERROR");
+    }
+
+    if (!startPoint || !endPoint) {
+      return jsonError("Could not resolve route endpoints.", 400, "GEOCODE_ERROR");
+    }
+
+    try {
+      assertWithinEuropeBounds(startPoint, body.start.trim());
+      assertWithinEuropeBounds(endPoint, body.end.trim());
+    } catch (error) {
+      if (error instanceof OutsideEuropeBoundsError) {
+        return jsonError(error.message, 400, "OUTSIDE_SERVICE_AREA");
+      }
+      throw error;
+    }
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);

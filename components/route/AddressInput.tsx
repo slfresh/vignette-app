@@ -1,6 +1,6 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { Search, Loader2 } from "lucide-react";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import type { TranslationKey } from "@/lib/i18n/translations";
 import type { RecentSearch } from "@/lib/storage/recentSearches";
@@ -69,6 +69,8 @@ interface AddressInputProps {
   onClearRecentSearches: () => void;
   /** CSS class for the input element */
   inputClassName: string;
+  /** True while autocomplete suggestions are loading */
+  isLoading?: boolean;
 }
 
 export function AddressInput({
@@ -91,6 +93,7 @@ export function AddressInput({
   recentSearches,
   onClearRecentSearches,
   inputClassName,
+  isLoading = false,
 }: AddressInputProps) {
   const { t } = useI18n();
 
@@ -109,6 +112,9 @@ export function AddressInput({
         {t(labelKey)}
       </span>
       <div className="relative">
+        {isLoading ? (
+          <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-[var(--accent)]" aria-hidden />
+        ) : null}
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
         <input
           role="combobox"
@@ -116,7 +122,8 @@ export function AddressInput({
           aria-controls={`${idPrefix}-listbox`}
           aria-activedescendant={activeIndex >= 0 ? `${idPrefix}-option-${activeIndex}` : undefined}
           aria-autocomplete="list"
-          className={inputClassName}
+          aria-busy={isLoading}
+          className={`${inputClassName}${isLoading ? " pr-10" : ""}`}
           placeholder={t(placeholderKey)}
           value={value}
           onFocus={() => onFocusChange(true)}

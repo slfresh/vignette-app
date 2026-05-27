@@ -17,10 +17,11 @@ import { BRAND } from "@/lib/config/branding";
 import type { TranslationKey } from "@/lib/i18n/translations";
 import { AlertTriangle, MapPin, RefreshCw } from "lucide-react";
 import dynamic from "next/dynamic";
-import { Suspense, useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useRouteAnalysis } from "@/hooks/useRouteAnalysis";
 import { useMapOverlays } from "@/hooks/useMapOverlays";
+import { parseRoutePointParams } from "@/lib/utils/routeUrl";
 
 const UnifiedMap = dynamic(() => import("@/components/map/UnifiedMap").then((mod) => mod.UnifiedMap), {
   ssr: false,
@@ -128,11 +129,17 @@ function HomeContent() {
 
   const fromUrl = safeDecodeParam(searchParams.get("from"));
   const toUrl = safeDecodeParam(searchParams.get("to"));
+  const urlRoutePoints = useMemo(() => parseRoutePointParams(searchParams), [searchParams]);
   const { result: routeResult, loading: routeLoading, submitRoute } = route;
   useEffect(() => {
     if (!fromUrl || !toUrl || routeResult || routeLoading) return;
-    submitRoute({ start: fromUrl, end: toUrl }).catch(() => {});
-  }, [fromUrl, toUrl, routeResult, routeLoading, submitRoute]);
+    submitRoute({
+      start: fromUrl,
+      end: toUrl,
+      startPoint: urlRoutePoints.startPoint,
+      endPoint: urlRoutePoints.endPoint,
+    }).catch(() => {});
+  }, [fromUrl, toUrl, urlRoutePoints.startPoint, urlRoutePoints.endPoint, routeResult, routeLoading, submitRoute]);
 
   const handleMapSelectStart = useCallback(
     (label: string, point: RoutePoint) => {
@@ -161,6 +168,9 @@ function HomeContent() {
     }
 
     const timer = setTimeout(() => {
+      if (formRef.current?.shouldSuppressAutoCalc()) {
+        return;
+      }
       lastAutoCalcRef.current = key;
       formRef.current?.submit();
     }, 600);
@@ -242,7 +252,7 @@ function HomeContent() {
           onFocusCapture={handleSheetFocusIn}
           className={[
             /* Mobile: fixed bottom sheet */
-            "fixed inset-x-0 bottom-0 z-[9000] rounded-t-2xl border-t border-[var(--border)] bg-surface shadow-[0_-4px_24px_rgba(0,0,0,0.12)]",
+            "mobile-sheet-container fixed inset-x-0 bottom-0 z-[9000] rounded-t-2xl border-t border-[var(--border)] bg-surface shadow-[0_-4px_24px_rgba(0,0,0,0.12)]",
             "transition-[max-height] duration-300 ease-out",
             mobileSheetOpen ? "max-h-[85dvh]" : "max-h-[170px]",
             /* Desktop: absolute floating card */
@@ -251,7 +261,7 @@ function HomeContent() {
         >
           {/* Mobile drag handle */}
           <div
-            className="flex cursor-grab justify-center pb-1 pt-3 touch-none md:hidden"
+            className="mobile-sheet-handle flex cursor-grab justify-center pb-1 pt-3 touch-none overscroll-none md:hidden"
             role="button"
             tabIndex={0}
             aria-label="Expand or collapse route form"
@@ -288,6 +298,8 @@ function HomeContent() {
               ref={formRef}
               initialStart={fromUrl}
               initialEnd={toUrl}
+              initialStartPoint={urlRoutePoints.startPoint}
+              initialEndPoint={urlRoutePoints.endPoint}
               isSubmitting={route.loading}
               onValuesChange={setFormValues}
               onSubmit={async (payload) => {
@@ -371,7 +383,16 @@ function HomeContent() {
                 <div className="grid gap-8 xl:sticky xl:top-20 xl:self-start">
                   <RouteBriefingCard result={route.result} />
                   <FuelStrategyPanel estimate={route.result.tripEstimate} />
-                  <ShareActions result={route.result} onOpenAiChat={() => overlays.setShowAiChat(true)} />
+                  <ShareActions
+                    result={route.result}
+                    sharePayload={{
+                      start: formValues.start,
+                      end: formValues.end,
+                      startPoint: formValues.startPoint,
+                      endPoint: formValues.endPoint,
+                    }}
+                    onOpenAiChat={() => overlays.setShowAiChat(true)}
+                  />
                   <ComplianceBadge compliance={route.result.compliance} />
                 </div>
               </div>

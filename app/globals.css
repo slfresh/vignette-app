@@ -112,6 +112,20 @@ html.theme-dark .leaflet-popup-content-wrapper {
 
 /* Mobile bottom sheet: strip form's decorative styling since the sheet provides it */
 @media (max-width: 767px) {
+  .mobile-sheet-container {
+    overscroll-behavior-y: contain;
+  }
+
+  .mobile-sheet-handle {
+    touch-action: none;
+  }
+
+  .mobile-sheet-form {
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
   .mobile-sheet-form > form {
     border: none;
     border-radius: 0;
